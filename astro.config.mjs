@@ -10,6 +10,9 @@ import sitemap from '@astrojs/sitemap';
 export default defineConfig({
   site: 'https://wattly-alpha.vercel.app/',
   output: 'server',
+  build: {
+    inlineStylesheets: 'always',
+  },
   integrations: [preact(), sitemap()],
 
   vite: {
