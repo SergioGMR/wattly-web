@@ -1,17 +1,67 @@
 ---
+import Layout from '../components/Layout.astro';
+import PriceHero from '../components/PriceHero.astro';
+import PriceHighlights from '../components/PriceHighlights.astro';
+import ApplianceTips from '../components/ApplianceTips.astro';
+import DayToggle from '../islands/DayToggle';
+import ApplianceConfigurator from '../islands/ApplianceConfigurator';
+import { fetchTodayPrices, fetchTomorrowPrices } from '../lib/api';
+import { PRESET_APPLIANCES, calcApplianceWindow } from '../lib/appliances';
 
+// Set edge cache: 1h TTL, 5min stale-while-revalidate
+Astro.response.headers.set('Cache-Control', 's-maxage=3600, stale-while-revalidate=300');
+
+// Fetch prices server-side
+let todayData = null;
+let tomorrowData = null;
+let fetchError = false;
+
+try {
+  [todayData, tomorrowData] = await Promise.all([fetchTodayPrices(), fetchTomorrowPrices()]);
+} catch (err) {
+  console.error('[wattly] Failed to fetch prices:', err);
+  fetchError = true;
+}
+
+// Calculate appliance windows server-side (only if we have data)
+const applianceWindows = todayData
+  ? PRESET_APPLIANCES.map((appliance) => calcApplianceWindow(appliance, todayData!.prices))
+  : [];
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout date={todayData?.date} highlights={todayData?.highlights}>
+  {
+    fetchError ? (
+      <div class="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+        <p class="text-lg font-medium text-red-700">No pudimos obtener los precios</p>
+        <p class="mt-2 text-sm text-red-600">
+          Intentá de nuevo en unos minutos. Si el problema persiste, el servicio puede estar
+          temporalmente no disponible.
+        </p>
+      </div>
+    ) : todayData ? (
+      <div class="space-y-10">
+        <PriceHero current={todayData.highlights.current} />
+
+        <section>
+          <h2 class="mb-4 text-lg font-semibold text-gray-700">Precios por hora</h2>
+          <DayToggle
+            client:load
+            today={{ prices: todayData.prices, highlights: todayData.highlights }}
+            tomorrow={
+              tomorrowData
+                ? { prices: tomorrowData.prices, highlights: tomorrowData.highlights }
+                : null
+            }
+          />
+        </section>
+
+        <PriceHighlights highlights={todayData.highlights} />
+
+        <ApplianceTips windows={applianceWindows} />
+
+        <ApplianceConfigurator client:visible prices={todayData.prices} />
+      </div>
+    ) : null
+  }
+</Layout>
