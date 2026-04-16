@@ -8,12 +8,13 @@ import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://wattly.app',
   output: 'server',
   integrations: [preact(), sitemap()],
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
   },
 
-  adapter: vercel()
+  adapter: vercel(),
 });
