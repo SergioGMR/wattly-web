@@ -1,0 +1,30 @@
+---
+import type { HourlyPrice } from '../lib/types';
+import { formatPrice, formatHour } from '../lib/format';
+
+interface Props {
+  current: HourlyPrice;
+}
+
+const { current } = Astro.props;
+
+const colorMap = {
+  green: { bg: 'bg-price-green-bg', text: 'text-price-green', label: 'Precio bajo' },
+  orange: { bg: 'bg-price-orange-bg', text: 'text-price-orange', label: 'Precio medio' },
+  red: { bg: 'bg-price-red-bg', text: 'text-price-red', label: 'Precio alto' },
+};
+
+const { bg, text, label } = colorMap[current.color];
+---
+
+<section class={`rounded-2xl p-8 ${bg} text-center`} aria-label="Precio actual de la electricidad">
+  <p class="text-sm font-medium tracking-wide text-gray-600 uppercase">
+    Precio ahora ({formatHour(current.hour)}h)
+  </p>
+  <p class={`mt-2 text-6xl font-bold tabular-nums ${text}`}>
+    {formatPrice(current.price)}
+  </p>
+  <p class={`mt-3 inline-block rounded-full px-3 py-1 text-sm font-semibold ${text} bg-white/60`}>
+    {label}
+  </p>
+</section>

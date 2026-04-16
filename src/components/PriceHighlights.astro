@@ -1,0 +1,60 @@
+---
+import type { Highlights } from '../lib/types';
+import { formatPrice, formatHour } from '../lib/format';
+
+interface Props {
+  highlights: Highlights;
+}
+
+const { highlights } = Astro.props;
+
+const colorTextMap = {
+  green: 'text-price-green',
+  orange: 'text-price-orange',
+  red: 'text-price-red',
+};
+
+const cards = [
+  {
+    label: 'Mínimo del día',
+    icon: '↓',
+    price: highlights.min,
+  },
+  {
+    label: 'Máximo del día',
+    icon: '↑',
+    price: highlights.max,
+  },
+  {
+    label: 'Promedio del día',
+    icon: '~',
+    price: {
+      price: highlights.average,
+      hour: '',
+      color: 'orange' as const,
+    },
+    isAverage: true,
+  },
+];
+---
+
+<section aria-label="Resumen de precios del día">
+  <h2 class="mb-4 text-lg font-semibold text-gray-700">Resumen del día</h2>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {
+      cards.map(({ label, icon, price, isAverage }) => (
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <p class="text-xs font-medium tracking-wide text-gray-500 uppercase">
+            <span aria-hidden="true">{icon}</span> {label}
+          </p>
+          <p class={`mt-2 text-2xl font-bold tabular-nums ${colorTextMap[price.color]}`}>
+            {formatPrice(price.price)}
+          </p>
+          {!isAverage && price.hour && (
+            <p class="mt-1 text-xs text-gray-500">a las {formatHour(price.hour)}h</p>
+          )}
+        </div>
+      ))
+    }
+  </div>
+</section>

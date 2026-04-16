@@ -1,0 +1,87 @@
+---
+import '../styles/globals.css';
+import type { Highlights } from '../lib/types';
+import { formatPrice, formatHour, formatDate } from '../lib/format';
+
+interface Props {
+  date?: string;
+  highlights?: Highlights;
+}
+
+const { date, highlights } = Astro.props;
+
+const siteTitle = 'Wattly';
+const siteUrl = 'https://wattly.app';
+
+const pageTitle =
+  highlights && date
+    ? `Precio de la Luz Hoy — ${formatDate(date)} | Desde ${formatPrice(highlights.min.price)}`
+    : `${siteTitle} — Precio de la luz en tiempo real`;
+
+const pageDescription = highlights
+  ? `Precio de la electricidad hoy: mín ${formatPrice(highlights.min.price)} (${formatHour(highlights.min.hour)}), máx ${formatPrice(highlights.max.price)} (${formatHour(highlights.max.hour)}). Mejor hora para la lavadora calculada automáticamente.`
+  : 'Consulta el precio de la electricidad en España hora a hora y calcula el mejor momento para usar tus electrodomésticos.';
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={siteUrl} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:locale" content="es_ES" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+
+    <!-- JSON-LD -->
+    {
+      highlights && date && (
+        <script
+          type="application/ld+json"
+          set:html={JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: pageTitle,
+            description: pageDescription,
+            url: siteUrl,
+            dateModified: date,
+            inLanguage: 'es',
+          })}
+        />
+      )
+    }
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+  </head>
+  <body>
+    <header class="border-b border-gray-200 bg-white">
+      <div class="mx-auto flex max-w-4xl items-center gap-2 px-4 py-4">
+        <span class="text-2xl font-bold text-gray-900">{siteTitle}</span>
+        <span class="text-sm text-gray-500">Precio de la luz en España</span>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-4xl px-4 py-8">
+      <slot />
+    </main>
+
+    <footer class="mt-12 border-t border-gray-200">
+      <div class="mx-auto max-w-4xl px-4 py-6 text-center text-sm text-gray-500">
+        <p>Datos: PVPC — Red Eléctrica de España. Actualizado cada hora.</p>
+        <p class="mt-1">Wattly — Ahorra en tu factura de luz.</p>
+      </div>
+    </footer>
+  </body>
+</html>
