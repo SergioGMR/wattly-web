@@ -14,10 +14,18 @@ import { formatHour, formatPrice } from '../lib/format';
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const COLOR_MAP = {
-  green: '#16a34a',
-  orange: '#ea580c',
-  red: '#dc2626',
+  light: { green: '#16a34a', orange: '#ea580c', red: '#dc2626' },
+  dark: { green: '#4ade80', orange: '#fbbf24', red: '#f87171' },
 };
+
+const CHART_CHROME = {
+  light: { grid: 'rgba(0,0,0,0.06)', tick: '#6b7280' },
+  dark: { grid: 'rgba(255,255,255,0.06)', tick: '#64748b' },
+};
+
+function getMode(): 'light' | 'dark' {
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+}
 
 interface Props {
   prices: HourlyPrice[];
@@ -27,13 +35,17 @@ export default function PriceChart({ prices }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
-  useEffect(() => {
+  function buildChart() {
     const canvas = canvasRef.current;
     if (!canvas || prices.length === 0) return;
 
     if (chartRef.current) {
       chartRef.current.destroy();
     }
+
+    const mode = getMode();
+    const colors = COLOR_MAP[mode];
+    const chrome = CHART_CHROME[mode];
 
     chartRef.current = new Chart(canvas, {
       type: 'bar',
@@ -43,7 +55,7 @@ export default function PriceChart({ prices }: Props) {
           {
             label: '€/kWh',
             data: prices.map((p) => p.price),
-            backgroundColor: prices.map((p) => COLOR_MAP[p.color]),
+            backgroundColor: prices.map((p) => colors[p.color]),
             borderRadius: 4,
           },
         ],
@@ -61,31 +73,45 @@ export default function PriceChart({ prices }: Props) {
           },
         },
         scales: {
+          x: {
+            ticks: { color: chrome.tick },
+            grid: { color: chrome.grid },
+          },
           y: {
             beginAtZero: true,
             ticks: {
+              color: chrome.tick,
               callback: (val) => `${Number(val).toFixed(2)}€`,
             },
+            grid: { color: chrome.grid },
           },
         },
       },
     });
+  }
+
+  useEffect(() => {
+    buildChart();
+
+    const handleThemeChange = () => buildChart();
+    window.addEventListener('wattly:theme-change', handleThemeChange);
 
     return () => {
       chartRef.current?.destroy();
+      window.removeEventListener('wattly:theme-change', handleThemeChange);
     };
   }, [prices]);
 
   if (prices.length === 0) {
     return (
-      <div class="flex h-48 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
+      <div class="glass-card flex h-48 items-center justify-center text-gray-400 dark:text-slate-500">
         Sin datos de precios
       </div>
     );
   }
 
   return (
-    <div class="relative h-64 w-full">
+    <div class="relative h-48 w-full sm:h-64">
       <canvas
         ref={canvasRef}
         role="img"

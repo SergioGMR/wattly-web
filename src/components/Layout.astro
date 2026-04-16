@@ -2,6 +2,8 @@
 import '../styles/globals.css';
 import type { Highlights } from '../lib/types';
 import { formatPrice, formatHour, formatDate } from '../lib/format';
+import ThemeToggle from '../islands/ThemeToggle';
+import OfflineBanner from '../islands/OfflineBanner';
 
 interface Props {
   date?: string;
@@ -21,67 +23,174 @@ const pageTitle =
 const pageDescription = highlights
   ? `Precio de la electricidad hoy: mín ${formatPrice(highlights.min.price)} (${formatHour(highlights.min.hour)}), máx ${formatPrice(highlights.max.price)} (${formatHour(highlights.max.hour)}). Mejor hora para la lavadora calculada automáticamente.`
   : 'Consulta el precio de la electricidad en España hora a hora y calcula el mejor momento para usar tus electrodomésticos.';
+
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
+
+// JSON-LD structured data
+const jsonLdGraph: Record<string, unknown>[] = [
+  {
+    '@type': 'Organization',
+    '@id': `${siteUrl}/#organization`,
+    name: siteTitle,
+    url: siteUrl,
+    logo: `${siteUrl}/favicon.svg`,
+  },
+  {
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
+    name: siteTitle,
+    url: siteUrl,
+    publisher: { '@id': `${siteUrl}/#organization` },
+    inLanguage: 'es',
+  },
+  {
+    '@type': 'WebPage',
+    '@id': canonicalUrl,
+    name: pageTitle,
+    description: pageDescription,
+    url: canonicalUrl,
+    isPartOf: { '@id': `${siteUrl}/#website` },
+    dateModified: date || new Date().toISOString().split('T')[0],
+    inLanguage: 'es',
+  },
+];
+
+if (highlights && date) {
+  jsonLdGraph.push({
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: '¿Cuál es el precio de la luz hoy?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `El precio actual de la electricidad es ${formatPrice(highlights.current.price)}. El mínimo del día es ${formatPrice(highlights.min.price)} a las ${formatHour(highlights.min.hour)}h y el máximo es ${formatPrice(highlights.max.price)} a las ${formatHour(highlights.max.hour)}h.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: '¿Cuándo es más barata la luz hoy?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `La hora más barata del día es a las ${formatHour(highlights.min.hour)}h con un precio de ${formatPrice(highlights.min.price)}.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: '¿Cuándo es más cara la luz hoy?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `La hora más cara del día es a las ${formatHour(highlights.max.hour)}h con un precio de ${formatPrice(highlights.max.price)}.`,
+        },
+      },
+    ],
+  });
+}
 ---
 
 <!doctype html>
 <html lang="es">
   <head>
+    <script is:inline>
+      (function () {
+        var t = localStorage.getItem('wattly:theme');
+        var d;
+        if (t === 'light') d = false;
+        else if (t === 'dark') d = true;
+        else if (t === 'system') d = matchMedia('(prefers-color-scheme: dark)').matches;
+        else d = true;
+        document.documentElement.classList.toggle('dark', d);
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
-    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Wattly" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Theme color -->
+    <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a1a" media="(prefers-color-scheme: dark)" />
+
+    <!-- Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://precio-lux-api.vercel.app" />
+    <link rel="dns-prefetch" href="https://precio-lux-api.vercel.app" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={siteUrl} />
+    <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
     <meta property="og:locale" content="es_ES" />
+    <meta property="og:site_name" content={siteTitle} />
+    <meta property="og:image" content={`${siteUrl}/og-image.webp`} />
+    <meta property="og:image:width" content="1190" />
+    <meta property="og:image:height" content="576" />
+    <meta property="og:image:type" content="image/webp" />
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={`${siteUrl}/og-image.webp`} />
 
     <!-- JSON-LD -->
-    {
-      highlights && date && (
-        <script
-          type="application/ld+json"
-          set:html={JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: pageTitle,
-            description: pageDescription,
-            url: siteUrl,
-            dateModified: date,
-            inLanguage: 'es',
-          })}
-        />
-      )
-    }
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': jsonLdGraph })}
+    />
 
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="32x32 48x48" />
+    <link rel="icon" type="image/webp" href="/icon.webp" sizes="256x256" />
+    <link rel="apple-touch-icon" href="/icon.webp" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
   </head>
   <body>
-    <header class="border-b border-gray-200 bg-white">
-      <div class="mx-auto flex max-w-4xl items-center gap-2 px-4 py-4">
-        <span class="text-2xl font-bold text-gray-900">{siteTitle}</span>
-        <span class="text-sm text-gray-500">Precio de la luz en España</span>
-      </div>
-    </header>
+    <div class="bg-grid-pattern pointer-events-none fixed inset-0 z-0" aria-hidden="true"></div>
+    <div class="relative z-10">
+      <OfflineBanner client:load />
+      <header class="glass-card-elevated sticky top-0 z-20 border-b border-transparent">
+        <div class="mx-auto flex max-w-4xl items-center gap-2 px-4 py-4">
+          <span class="text-xl font-bold text-gray-900 sm:text-2xl dark:text-white"
+            >{siteTitle}</span
+          >
+          <span class="hidden text-sm text-gray-500 sm:inline dark:text-slate-400"
+            >Precio de la luz en España</span
+          >
+          <div class="ml-auto">
+            <ThemeToggle client:load />
+          </div>
+        </div>
+      </header>
 
-    <main class="mx-auto max-w-4xl px-4 py-8">
-      <slot />
-    </main>
+      <main class="mx-auto max-w-4xl px-4 py-5 sm:py-8">
+        <slot />
+      </main>
 
-    <footer class="mt-12 border-t border-gray-200">
-      <div class="mx-auto max-w-4xl px-4 py-6 text-center text-sm text-gray-500">
-        <p>Datos: PVPC — Red Eléctrica de España. Actualizado cada hora.</p>
-        <p class="mt-1">Wattly — Ahorra en tu factura de luz.</p>
-      </div>
-    </footer>
+      <footer class="mt-12 border-t border-gray-200/50 dark:border-white/5">
+        <div
+          class="mx-auto max-w-4xl px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-500"
+        >
+          <p>Datos: PVPC — Red Eléctrica de España. Actualizado cada hora.</p>
+          <p class="mt-1">Wattly — Ahorra en tu factura de luz.</p>
+        </div>
+      </footer>
+    </div>
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
   </body>
 </html>

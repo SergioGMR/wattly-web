@@ -10,25 +10,29 @@ const { windows } = Astro.props;
 ---
 
 <section aria-label="Mejores horas para electrodomésticos">
-  <h2 class="mb-4 text-lg font-semibold text-gray-700">Mejor hora para tus electrodomésticos</h2>
+  <h2 class="mb-4 text-xs font-semibold tracking-widest text-blue-500 uppercase dark:text-blue-400">
+    Mejor hora para tus electrodomésticos
+  </h2>
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     {
       windows.map(({ appliance, startHour, endHour, avgPrice, savings }) => (
-        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="glass-card p-4">
           <div class="flex items-center gap-2">
             <span class="text-2xl" aria-hidden="true">
               {appliance.icon}
             </span>
             <div>
-              <p class="font-semibold text-gray-800">{appliance.name}</p>
-              <p class="text-xs text-gray-500">{appliance.durationHours}h de uso</p>
+              <p class="font-semibold text-gray-800 dark:text-slate-200">{appliance.name}</p>
+              <p class="text-xs text-gray-500 dark:text-slate-500">
+                {appliance.durationHours}h de uso
+              </p>
             </div>
           </div>
           <div class="bg-price-green-bg mt-3 rounded-lg px-3 py-2">
             <p class="text-price-green text-sm font-medium">
               {formatHourIndex(startHour)} – {formatHourIndex(endHour)}
             </p>
-            <p class="mt-0.5 text-xs text-gray-600">
+            <p class="mt-0.5 text-xs text-gray-600 dark:text-slate-400">
               {formatPrice(avgPrice)} promedio · {savings.toFixed(0)}% de ahorro
             </p>
           </div>

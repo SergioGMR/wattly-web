@@ -93,11 +93,17 @@ export default function ApplianceConfigurator({ prices }: Props) {
 
   return (
     <section aria-label="Configurador de electrodomésticos personalizados">
-      <h2 class="mb-4 text-lg font-semibold text-gray-700">Mis electrodomésticos</h2>
+      <h2 class="mb-4 text-xs font-semibold tracking-widest text-blue-500 uppercase dark:text-blue-400">
+        Mis electrodomésticos
+      </h2>
 
       {/* Form */}
-      <form onSubmit={handleAdd} noValidate class="mb-6 flex flex-wrap gap-3">
-        <div class="min-w-40 flex-1">
+      <form
+        onSubmit={handleAdd}
+        noValidate
+        class="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap"
+      >
+        <div class="sm:min-w-40 sm:flex-1">
           <label htmlFor="appliance-name" class="sr-only">
             Nombre del electrodoméstico
           </label>
@@ -107,8 +113,8 @@ export default function ApplianceConfigurator({ prices }: Props) {
             placeholder="Nombre (ej. Horno)"
             value={name}
             onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            class={`w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-gray-400 focus:outline-none ${
-              errors.name ? 'border-red-400' : 'border-gray-300'
+            class={`w-full rounded-lg border bg-white/50 px-3 py-2 text-sm backdrop-blur-sm focus:ring-2 focus:ring-blue-400 focus:outline-none dark:bg-white/5 dark:text-gray-100 dark:focus:ring-blue-500 ${
+              errors.name ? 'border-red-400' : 'border-black/10 dark:border-white/10'
             }`}
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? 'name-error' : undefined}
@@ -120,7 +126,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
           )}
         </div>
 
-        <div class="w-32">
+        <div class="sm:w-32">
           <label htmlFor="appliance-duration" class="sr-only">
             Duración en horas
           </label>
@@ -132,8 +138,8 @@ export default function ApplianceConfigurator({ prices }: Props) {
             placeholder="Horas"
             value={duration}
             onInput={(e) => setDuration((e.target as HTMLInputElement).value)}
-            class={`w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-gray-400 focus:outline-none ${
-              errors.duration ? 'border-red-400' : 'border-gray-300'
+            class={`w-full rounded-lg border bg-white/50 px-3 py-2 text-sm backdrop-blur-sm focus:ring-2 focus:ring-blue-400 focus:outline-none dark:bg-white/5 dark:text-gray-100 dark:focus:ring-blue-500 ${
+              errors.duration ? 'border-red-400' : 'border-black/10 dark:border-white/10'
             }`}
             aria-invalid={!!errors.duration}
             aria-describedby={errors.duration ? 'duration-error' : undefined}
@@ -147,7 +153,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
 
         <button
           type="submit"
-          class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+          class="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 dark:bg-blue-500/80 dark:hover:bg-blue-500"
         >
           Añadir
         </button>
@@ -155,7 +161,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
 
       {/* List */}
       {appliances.length === 0 ? (
-        <p class="text-sm text-gray-400">
+        <p class="text-sm text-gray-400 dark:text-slate-500">
           Añade tus electrodomésticos para ver cuándo es más barato usarlos.
         </p>
       ) : (
@@ -163,14 +169,13 @@ export default function ApplianceConfigurator({ prices }: Props) {
           {appliances.map((stored) => {
             const win = getWindow(stored);
             return (
-              <li
-                key={stored.id}
-                class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-              >
+              <li key={stored.id} class="glass-card flex items-center justify-between p-4">
                 <div>
-                  <p class="font-medium text-gray-800">
+                  <p class="font-medium text-gray-800 dark:text-slate-200">
                     ⚡ {stored.name}{' '}
-                    <span class="text-xs text-gray-400">({stored.durationHours}h)</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">
+                      ({stored.durationHours}h)
+                    </span>
                   </p>
                   {win ? (
                     <p class="text-price-green mt-0.5 text-sm">
@@ -178,13 +183,15 @@ export default function ApplianceConfigurator({ prices }: Props) {
                       {formatPrice(win.avgPrice)}
                     </p>
                   ) : (
-                    <p class="mt-0.5 text-sm text-gray-400">Sin datos de precios</p>
+                    <p class="mt-0.5 text-sm text-gray-400 dark:text-gray-500">
+                      Sin datos de precios
+                    </p>
                   )}
                 </div>
                 <button
                   onClick={() => handleRemove(stored.id)}
                   aria-label={`Eliminar ${stored.name}`}
-                  class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                  class="rounded-lg p-2.5 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400"
                 >
                   ✕
                 </button>

@@ -32,8 +32,8 @@ export default function DayToggle({ today, tomorrow }: Props) {
           onClick={() => setActiveDay('today')}
           class={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
             activeDay === 'today'
-              ? 'bg-gray-900 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-blue-500/90 text-white dark:bg-blue-500/80'
+              : 'bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10'
           }`}
         >
           Hoy
@@ -47,8 +47,8 @@ export default function DayToggle({ today, tomorrow }: Props) {
           onClick={() => tomorrow && setActiveDay('tomorrow')}
           class={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
             activeDay === 'tomorrow'
-              ? 'bg-gray-900 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-blue-500/90 text-white dark:bg-blue-500/80'
+              : 'bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10'
           } disabled:cursor-not-allowed disabled:opacity-40`}
         >
           Mañana {!tomorrow && '(disponible ~20:00)'}
@@ -62,7 +62,7 @@ export default function DayToggle({ today, tomorrow }: Props) {
             <PriceChart prices={currentData.prices} />
 
             {/* Quick highlights under chart */}
-            <div class="flex gap-4 text-sm text-gray-600">
+            <div class="flex gap-4 text-sm text-gray-600 dark:text-slate-400">
               <span>
                 Mín:{' '}
                 <strong class="text-price-green">
@@ -80,8 +80,8 @@ export default function DayToggle({ today, tomorrow }: Props) {
             </div>
           </div>
         ) : (
-          <div class="flex h-48 items-center justify-center rounded-xl bg-gray-100">
-            <p class="text-gray-500">
+          <div class="glass-card flex h-48 items-center justify-center">
+            <p class="text-gray-500 dark:text-slate-500">
               Datos de mañana disponibles a partir de las 20:00 (hora España)
             </p>
           </div>

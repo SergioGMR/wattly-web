@@ -32,19 +32,31 @@ const applianceWindows = todayData
 <Layout date={todayData?.date} highlights={todayData?.highlights}>
   {
     fetchError ? (
-      <div class="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-        <p class="text-lg font-medium text-red-700">No pudimos obtener los precios</p>
-        <p class="mt-2 text-sm text-red-600">
-          Intentá de nuevo en unos minutos. Si el problema persiste, el servicio puede estar
-          temporalmente no disponible.
-        </p>
+      <div class="space-y-6">
+        <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
+          Precio de la Luz Hoy en España
+        </h1>
+        <div class="glass-card border-red-500/20 p-6 text-center dark:border-red-500/20">
+          <p class="text-lg font-medium text-red-700 dark:text-red-400">
+            No pudimos obtener los precios
+          </p>
+          <p class="mt-2 text-sm text-red-600 dark:text-red-400">
+            Intentá de nuevo en unos minutos. Si el problema persiste, el servicio puede estar
+            temporalmente no disponible.
+          </p>
+        </div>
       </div>
     ) : todayData ? (
-      <div class="space-y-10">
+      <div class="space-y-6 sm:space-y-10">
+        <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
+          Precio de la Luz Hoy en España
+        </h1>
         <PriceHero current={todayData.highlights.current} />
 
         <section>
-          <h2 class="mb-4 text-lg font-semibold text-gray-700">Precios por hora</h2>
+          <h2 class="mb-4 text-xs font-semibold tracking-widest text-blue-500 uppercase dark:text-blue-400">
+            Precios por hora
+          </h2>
           <DayToggle
             client:load
             today={{ prices: todayData.prices, highlights: todayData.highlights }}

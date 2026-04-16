@@ -17,14 +17,21 @@ const colorMap = {
 const { bg, text, label } = colorMap[current.color];
 ---
 
-<section class={`rounded-2xl p-8 ${bg} text-center`} aria-label="Precio actual de la electricidad">
-  <p class="text-sm font-medium tracking-wide text-gray-600 uppercase">
+<section
+  class={`glass-card hero-glow relative overflow-hidden p-5 sm:p-8 ${bg} text-center`}
+  aria-label="Precio actual de la electricidad"
+>
+  <p
+    class="relative z-10 text-xs font-medium tracking-widest text-gray-500 uppercase dark:text-slate-500"
+  >
     Precio ahora ({formatHour(current.hour)}h)
   </p>
-  <p class={`mt-2 text-6xl font-bold tabular-nums ${text}`}>
+  <p class={`relative z-10 mt-2 text-4xl font-bold tabular-nums sm:text-6xl ${text}`}>
     {formatPrice(current.price)}
   </p>
-  <p class={`mt-3 inline-block rounded-full px-3 py-1 text-sm font-semibold ${text} bg-white/60`}>
+  <p
+    class={`relative z-10 mt-3 inline-block rounded-full border border-current/20 px-3 py-1 text-sm font-semibold backdrop-blur-sm ${text} bg-white/20 dark:bg-white/5`}
+  >
     {label}
   </p>
 </section>
