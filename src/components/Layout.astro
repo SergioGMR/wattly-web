@@ -14,7 +14,7 @@ interface Props {
 const { date, highlights } = Astro.props;
 
 const siteTitle = 'Wattly';
-const siteUrl = 'https://wattly.app';
+const siteUrl = 'https://wattly-alpha.vercel.app/';
 
 const pageTitle =
   highlights && date
@@ -159,13 +159,17 @@ if (highlights && date) {
     <link rel="sitemap" href="/sitemap-index.xml" />
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
     <div class="bg-grid-pattern pointer-events-none fixed inset-0 z-0" aria-hidden="true"></div>
     <div class="relative z-10">
       <OfflineBanner client:load />
       <header class="glass-card-elevated sticky top-0 z-20 border-b border-transparent">
-        <div class="mx-auto flex max-w-4xl items-center gap-2 px-4 py-4">
-          <span class="text-xl font-bold text-gray-900 sm:text-2xl dark:text-white"
-            >{siteTitle}</span
+        <nav
+          aria-label="Navegación principal"
+          class="mx-auto flex max-w-4xl items-center gap-2 px-4 py-4"
+        >
+          <a href="/" class="text-xl font-bold text-gray-900 sm:text-2xl dark:text-white"
+            >{siteTitle}</a
           >
           <span class="hidden text-sm text-gray-500 sm:inline dark:text-slate-400"
             >Precio de la luz en España</span
@@ -173,10 +177,10 @@ if (highlights && date) {
           <div class="ml-auto">
             <ThemeToggle client:load />
           </div>
-        </div>
+        </nav>
       </header>
 
-      <main class="mx-auto max-w-4xl px-4 py-5 sm:py-8">
+      <main id="main-content" tabindex="-1" class="mx-auto max-w-4xl px-4 py-5 sm:py-8">
         <slot />
       </main>
 

@@ -20,15 +20,51 @@ export default function DayToggle({ today, tomorrow }: Props) {
 
   const currentData = activeDay === 'today' ? today : tomorrow;
 
+  function handleTabKeyDown(e: KeyboardEvent) {
+    const tabs: Day[] = ['today', 'tomorrow'];
+    const currentIndex = tabs.indexOf(activeDay);
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const nextIndex = (currentIndex + 1) % tabs.length;
+      if (tabs[nextIndex] === 'tomorrow' && !tomorrow) return;
+      setActiveDay(tabs[nextIndex]);
+      document.getElementById(`tab-${tabs[nextIndex]}`)?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      if (tabs[nextIndex] === 'tomorrow' && !tomorrow) return;
+      setActiveDay(tabs[nextIndex]);
+      document.getElementById(`tab-${tabs[nextIndex]}`)?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setActiveDay('today');
+      document.getElementById('tab-today')?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      if (tomorrow) {
+        setActiveDay('tomorrow');
+        document.getElementById('tab-tomorrow')?.focus();
+      }
+    }
+  }
+
   return (
     <div>
       {/* Tab navigation */}
-      <div class="mb-4 flex gap-2" role="tablist" aria-label="Seleccionar día">
+      <div
+        class="mb-4 flex gap-2"
+        role="tablist"
+        aria-label="Seleccionar día"
+        tabIndex={-1}
+        onKeyDown={handleTabKeyDown}
+      >
         <button
           role="tab"
           aria-selected={activeDay === 'today'}
           aria-controls="panel-today"
           id="tab-today"
+          tabIndex={activeDay === 'today' ? 0 : -1}
           onClick={() => setActiveDay('today')}
           class={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
             activeDay === 'today'
@@ -43,6 +79,7 @@ export default function DayToggle({ today, tomorrow }: Props) {
           aria-selected={activeDay === 'tomorrow'}
           aria-controls="panel-tomorrow"
           id="tab-tomorrow"
+          tabIndex={activeDay === 'tomorrow' ? 0 : -1}
           disabled={!tomorrow}
           onClick={() => tomorrow && setActiveDay('tomorrow')}
           class={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${

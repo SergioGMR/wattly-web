@@ -49,3 +49,5 @@ public/favicon.svg
 
 .agents*
 .claude*
+.unlighthouse/*
+lighthouse-report.json/*

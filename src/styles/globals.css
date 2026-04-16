@@ -113,3 +113,39 @@ body:where(.dark *) {
 .dark .hero-glow::before {
   background: radial-gradient(ellipse, rgba(59, 130, 246, 0.18) 0%, transparent 70%);
 }
+
+/* Accessibility: focus-visible indicator for all interactive elements */
+:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+/* Accessibility: respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Accessibility: skip link (hidden until focused) */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 100;
+  padding: 8px 16px;
+  background: var(--color-accent-blue);
+  color: #fff;
+  border-radius: 0 0 8px 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0;
+}

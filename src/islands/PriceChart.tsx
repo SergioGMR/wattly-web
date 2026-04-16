@@ -110,13 +110,56 @@ export default function PriceChart({ prices }: Props) {
     );
   }
 
+  const colorLabel = (color: string) =>
+    color === 'green' ? 'Bajo' : color === 'orange' ? 'Medio' : 'Alto';
+
   return (
-    <div class="relative h-48 w-full sm:h-64">
-      <canvas
-        ref={canvasRef}
-        role="img"
-        aria-label="Gráfico de precios de la electricidad por hora"
-      />
+    <div>
+      <div class="relative h-48 w-full sm:h-64">
+        <canvas
+          ref={canvasRef}
+          role="img"
+          aria-label="Gráfico de precios de la electricidad por hora"
+        />
+      </div>
+      <details class="mt-2">
+        <summary class="cursor-pointer text-sm text-blue-500 dark:text-blue-400">
+          Ver datos en tabla
+        </summary>
+        <div class="mt-2 max-h-48 overflow-auto rounded-lg border border-black/10 dark:border-white/10">
+          <table class="w-full text-left text-sm">
+            <caption class="sr-only">Precios de la electricidad por hora</caption>
+            <thead class="sticky top-0 bg-white/90 backdrop-blur-sm dark:bg-gray-900/90">
+              <tr>
+                <th scope="col" class="px-3 py-2 font-medium text-gray-700 dark:text-slate-300">
+                  Hora
+                </th>
+                <th scope="col" class="px-3 py-2 font-medium text-gray-700 dark:text-slate-300">
+                  Precio
+                </th>
+                <th scope="col" class="px-3 py-2 font-medium text-gray-700 dark:text-slate-300">
+                  Nivel
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {prices.map((p) => (
+                <tr key={p.hour} class="border-t border-black/5 dark:border-white/5">
+                  <td class="px-3 py-1.5 text-gray-600 dark:text-slate-400">
+                    {formatHour(p.hour)}h
+                  </td>
+                  <td class="px-3 py-1.5 text-gray-800 tabular-nums dark:text-slate-200">
+                    {formatPrice(p.price)}
+                  </td>
+                  <td class="px-3 py-1.5 text-gray-600 dark:text-slate-400">
+                    {colorLabel(p.color)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
 }

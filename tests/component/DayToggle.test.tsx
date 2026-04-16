@@ -69,4 +69,56 @@ describe('DayToggle', () => {
     // and null tomorrow means the panel shows the unavailable message only if selected
     expect(screen.queryByText(/disponible a partir/)).toBeNull();
   });
+
+  describe('keyboard navigation', () => {
+    it('ArrowRight moves to tomorrow tab when available', () => {
+      render(<DayToggle today={today} tomorrow={tomorrow} />);
+      const tablist = screen.getByRole('tablist');
+      fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+      expect(screen.getByRole('tab', { name: 'Mañana' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+    });
+
+    it('ArrowRight does not move to disabled tomorrow tab', () => {
+      render(<DayToggle today={today} tomorrow={null} />);
+      const tablist = screen.getByRole('tablist');
+      fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+      expect(screen.getByRole('tab', { name: 'Hoy' }).getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('ArrowLeft wraps to tomorrow when on today', () => {
+      render(<DayToggle today={today} tomorrow={tomorrow} />);
+      const tablist = screen.getByRole('tablist');
+      fireEvent.keyDown(tablist, { key: 'ArrowLeft' });
+      expect(screen.getByRole('tab', { name: 'Mañana' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+    });
+
+    it('Home key moves to today tab', () => {
+      render(<DayToggle today={today} tomorrow={tomorrow} />);
+      const tablist = screen.getByRole('tablist');
+      fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+      fireEvent.keyDown(tablist, { key: 'Home' });
+      expect(screen.getByRole('tab', { name: 'Hoy' }).getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('End key moves to tomorrow tab when available', () => {
+      render(<DayToggle today={today} tomorrow={tomorrow} />);
+      const tablist = screen.getByRole('tablist');
+      fireEvent.keyDown(tablist, { key: 'End' });
+      expect(screen.getByRole('tab', { name: 'Mañana' }).getAttribute('aria-selected')).toBe(
+        'true'
+      );
+    });
+
+    it('active tab has tabIndex 0, inactive has -1', () => {
+      render(<DayToggle today={today} tomorrow={tomorrow} />);
+      const todayTab = screen.getByRole('tab', { name: 'Hoy' });
+      const tomorrowTab = screen.getByRole('tab', { name: 'Mañana' });
+      expect(todayTab.getAttribute('tabindex')).toBe('0');
+      expect(tomorrowTab.getAttribute('tabindex')).toBe('-1');
+    });
+  });
 });

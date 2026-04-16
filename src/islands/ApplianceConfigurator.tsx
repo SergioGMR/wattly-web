@@ -113,7 +113,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
             placeholder="Nombre (ej. Horno)"
             value={name}
             onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            class={`w-full rounded-lg border bg-white/50 px-3 py-2 text-sm backdrop-blur-sm focus:ring-2 focus:ring-blue-400 focus:outline-none dark:bg-white/5 dark:text-gray-100 dark:focus:ring-blue-500 ${
+            class={`w-full rounded-lg border bg-white/50 px-3 py-2 text-sm backdrop-blur-sm focus:ring-2 focus:ring-blue-400 focus-visible:outline-none dark:bg-white/5 dark:text-gray-100 dark:focus:ring-blue-500 ${
               errors.name ? 'border-red-400' : 'border-black/10 dark:border-white/10'
             }`}
             aria-invalid={!!errors.name}
@@ -138,7 +138,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
             placeholder="Horas"
             value={duration}
             onInput={(e) => setDuration((e.target as HTMLInputElement).value)}
-            class={`w-full rounded-lg border bg-white/50 px-3 py-2 text-sm backdrop-blur-sm focus:ring-2 focus:ring-blue-400 focus:outline-none dark:bg-white/5 dark:text-gray-100 dark:focus:ring-blue-500 ${
+            class={`w-full rounded-lg border bg-white/50 px-3 py-2 text-sm backdrop-blur-sm focus:ring-2 focus:ring-blue-400 focus-visible:outline-none dark:bg-white/5 dark:text-gray-100 dark:focus:ring-blue-500 ${
               errors.duration ? 'border-red-400' : 'border-black/10 dark:border-white/10'
             }`}
             aria-invalid={!!errors.duration}
@@ -160,46 +160,48 @@ export default function ApplianceConfigurator({ prices }: Props) {
       </form>
 
       {/* List */}
-      {appliances.length === 0 ? (
-        <p class="text-sm text-gray-400 dark:text-slate-500">
-          Añade tus electrodomésticos para ver cuándo es más barato usarlos.
-        </p>
-      ) : (
-        <ul class="space-y-3" aria-label="Lista de electrodomésticos personalizados">
-          {appliances.map((stored) => {
-            const win = getWindow(stored);
-            return (
-              <li key={stored.id} class="glass-card flex items-center justify-between p-4">
-                <div>
-                  <p class="font-medium text-gray-800 dark:text-slate-200">
-                    ⚡ {stored.name}{' '}
-                    <span class="text-xs text-gray-400 dark:text-gray-500">
-                      ({stored.durationHours}h)
-                    </span>
-                  </p>
-                  {win ? (
-                    <p class="text-price-green mt-0.5 text-sm">
-                      Mejor: {formatHourIndex(win.startHour)}–{formatHourIndex(win.endHour)} ·{' '}
-                      {formatPrice(win.avgPrice)}
+      <div aria-live="polite" aria-relevant="additions removals">
+        {appliances.length === 0 ? (
+          <p class="text-sm text-gray-400 dark:text-slate-500">
+            Añade tus electrodomésticos para ver cuándo es más barato usarlos.
+          </p>
+        ) : (
+          <ul class="space-y-3" aria-label="Lista de electrodomésticos personalizados">
+            {appliances.map((stored) => {
+              const win = getWindow(stored);
+              return (
+                <li key={stored.id} class="glass-card flex items-center justify-between p-4">
+                  <div>
+                    <p class="font-medium text-gray-800 dark:text-slate-200">
+                      <span aria-hidden="true">⚡</span> {stored.name}{' '}
+                      <span class="text-xs text-gray-400 dark:text-gray-500">
+                        ({stored.durationHours}h)
+                      </span>
                     </p>
-                  ) : (
-                    <p class="mt-0.5 text-sm text-gray-400 dark:text-gray-500">
-                      Sin datos de precios
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleRemove(stored.id)}
-                  aria-label={`Eliminar ${stored.name}`}
-                  class="rounded-lg p-2.5 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400"
-                >
-                  ✕
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                    {win ? (
+                      <p class="text-price-green mt-0.5 text-sm">
+                        Mejor: {formatHourIndex(win.startHour)}–{formatHourIndex(win.endHour)} ·{' '}
+                        {formatPrice(win.avgPrice)}
+                      </p>
+                    ) : (
+                      <p class="mt-0.5 text-sm text-gray-400 dark:text-gray-500">
+                        Sin datos de precios
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleRemove(stored.id)}
+                    aria-label={`Eliminar ${stored.name}`}
+                    class="rounded-lg p-2.5 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400"
+                  >
+                    ✕
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

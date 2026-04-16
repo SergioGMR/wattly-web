@@ -45,4 +45,45 @@ describe('PriceChart', () => {
     render(<PriceChart prices={[]} />);
     expect(screen.getByText('Sin datos de precios')).toBeTruthy();
   });
+
+  describe('data table accessibility', () => {
+    it('renders a data table with price data', () => {
+      render(<PriceChart prices={mockPrices} />);
+      const table = screen.getByRole('table');
+      expect(table).toBeTruthy();
+    });
+
+    it('table has correct number of rows', () => {
+      const { container } = render(<PriceChart prices={mockPrices} />);
+      const rows = container.querySelectorAll('tbody tr');
+      expect(rows.length).toBe(mockPrices.length);
+    });
+
+    it('table shows color level as text (Bajo/Medio/Alto)', () => {
+      render(<PriceChart prices={mockPrices} />);
+      expect(screen.getByText('Bajo')).toBeTruthy();
+      expect(screen.getByText('Medio')).toBeTruthy();
+      expect(screen.getByText('Alto')).toBeTruthy();
+    });
+
+    it('table has a sr-only caption', () => {
+      const { container } = render(<PriceChart prices={mockPrices} />);
+      const caption = container.querySelector('caption');
+      expect(caption).toBeTruthy();
+      expect(caption?.textContent).toBe('Precios de la electricidad por hora');
+    });
+
+    it('table is inside a collapsible details element', () => {
+      const { container } = render(<PriceChart prices={mockPrices} />);
+      const details = container.querySelector('details');
+      expect(details).toBeTruthy();
+      const summary = details?.querySelector('summary');
+      expect(summary?.textContent).toBe('Ver datos en tabla');
+    });
+
+    it('no data table when prices are empty', () => {
+      render(<PriceChart prices={[]} />);
+      expect(screen.queryByRole('table')).toBeNull();
+    });
+  });
 });

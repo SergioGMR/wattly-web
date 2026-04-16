@@ -57,4 +57,62 @@ describe('ThemeToggle', () => {
 
     window.removeEventListener('wattly:theme-change', handler);
   });
+
+  describe('keyboard navigation', () => {
+    it('ArrowRight cycles from system to light', () => {
+      render(<ThemeToggle />);
+      const radiogroup = screen.getByRole('radiogroup');
+      fireEvent.keyDown(radiogroup, { key: 'ArrowRight' });
+      expect(screen.getByRole('radio', { name: 'Modo claro' }).getAttribute('aria-checked')).toBe(
+        'true'
+      );
+    });
+
+    it('ArrowLeft cycles from system to dark', () => {
+      render(<ThemeToggle />);
+      const radiogroup = screen.getByRole('radiogroup');
+      fireEvent.keyDown(radiogroup, { key: 'ArrowLeft' });
+      expect(screen.getByRole('radio', { name: 'Modo oscuro' }).getAttribute('aria-checked')).toBe(
+        'true'
+      );
+    });
+
+    it('ArrowDown cycles forward', () => {
+      render(<ThemeToggle />);
+      const radiogroup = screen.getByRole('radiogroup');
+      fireEvent.keyDown(radiogroup, { key: 'ArrowDown' });
+      expect(screen.getByRole('radio', { name: 'Modo claro' }).getAttribute('aria-checked')).toBe(
+        'true'
+      );
+    });
+
+    it('ArrowUp cycles backward', () => {
+      render(<ThemeToggle />);
+      const radiogroup = screen.getByRole('radiogroup');
+      fireEvent.keyDown(radiogroup, { key: 'ArrowUp' });
+      expect(screen.getByRole('radio', { name: 'Modo oscuro' }).getAttribute('aria-checked')).toBe(
+        'true'
+      );
+    });
+
+    it('selected radio has tabIndex 0, others have -1', () => {
+      render(<ThemeToggle />);
+      const system = screen.getByRole('radio', { name: 'Sistema' });
+      const light = screen.getByRole('radio', { name: 'Modo claro' });
+      const dark = screen.getByRole('radio', { name: 'Modo oscuro' });
+      expect(system.getAttribute('tabindex')).toBe('0');
+      expect(light.getAttribute('tabindex')).toBe('-1');
+      expect(dark.getAttribute('tabindex')).toBe('-1');
+    });
+  });
+
+  describe('SVG accessibility', () => {
+    it('all SVG icons have aria-hidden="true"', () => {
+      const { container } = render(<ThemeToggle />);
+      const svgs = container.querySelectorAll('svg');
+      svgs.forEach((svg) => {
+        expect(svg.getAttribute('aria-hidden')).toBe('true');
+      });
+    });
+  });
 });
