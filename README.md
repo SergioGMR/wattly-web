@@ -37,6 +37,15 @@ Wattly es una webapp que muestra el **precio de la electricidad (PVPC)** en Espa
 
 ---
 
+## Preview
+
+<p align="center">
+  <img src="darkmode.webp" alt="Wattly — Dark Mode" width="480" />
+  <img src="lightmode.webp" alt="Wattly — Light Mode" width="480" />
+</p>
+
+---
+
 ## Tech Stack
 
 | Capa        | Tecnología                                                          |
