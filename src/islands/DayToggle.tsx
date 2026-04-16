@@ -118,7 +118,7 @@ export default function DayToggle({ today, tomorrow }: Props) {
           </div>
         ) : (
           <div class="glass-card flex h-48 items-center justify-center">
-            <p class="text-gray-500 dark:text-slate-500">
+            <p class="text-gray-500 dark:text-slate-400">
               Datos de mañana disponibles a partir de las 20:00 (hora España)
             </p>
           </div>

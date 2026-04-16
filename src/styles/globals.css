@@ -1,3 +1,4 @@
+@import '@fontsource-variable/inter';
 @import 'tailwindcss';
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -23,7 +24,7 @@
 
 :root {
   font-family:
-    'Inter',
+    'Inter Variable',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,

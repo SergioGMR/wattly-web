@@ -162,7 +162,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
       {/* List */}
       <div aria-live="polite" aria-relevant="additions removals">
         {appliances.length === 0 ? (
-          <p class="text-sm text-gray-400 dark:text-slate-500">
+          <p class="text-sm text-gray-500 dark:text-slate-400">
             Añade tus electrodomésticos para ver cuándo es más barato usarlos.
           </p>
         ) : (
@@ -174,7 +174,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
                   <div>
                     <p class="font-medium text-gray-800 dark:text-slate-200">
                       <span aria-hidden="true">⚡</span> {stored.name}{' '}
-                      <span class="text-xs text-gray-400 dark:text-gray-500">
+                      <span class="text-xs text-gray-400 dark:text-gray-400">
                         ({stored.durationHours}h)
                       </span>
                     </p>
@@ -184,7 +184,7 @@ export default function ApplianceConfigurator({ prices }: Props) {
                         {formatPrice(win.avgPrice)}
                       </p>
                     ) : (
-                      <p class="mt-0.5 text-sm text-gray-400 dark:text-gray-500">
+                      <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
                         Sin datos de precios
                       </p>
                     )}

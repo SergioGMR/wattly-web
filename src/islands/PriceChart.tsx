@@ -104,7 +104,7 @@ export default function PriceChart({ prices }: Props) {
 
   if (prices.length === 0) {
     return (
-      <div class="glass-card flex h-48 items-center justify-center text-gray-400 dark:text-slate-500">
+      <div class="glass-card flex h-48 items-center justify-center text-gray-500 dark:text-slate-400">
         Sin datos de precios
       </div>
     );

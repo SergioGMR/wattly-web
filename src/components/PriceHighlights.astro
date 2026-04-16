@@ -46,14 +46,14 @@ const cards = [
     {
       cards.map(({ label, icon, price, isAverage }) => (
         <div class="glass-card p-4">
-          <p class="text-xs font-medium tracking-widest text-slate-500 uppercase">
+          <p class="text-xs font-medium tracking-widest text-slate-600 uppercase dark:text-slate-400">
             <span aria-hidden="true">{icon}</span> {label}
           </p>
           <p class={`mt-2 text-2xl font-bold tabular-nums ${colorTextMap[price.color]}`}>
             {formatPrice(price.price)}
           </p>
           {!isAverage && price.hour && (
-            <p class="mt-1 text-xs text-gray-500 dark:text-slate-500">
+            <p class="mt-1 text-xs text-gray-500 dark:text-slate-400">
               a las {formatHour(price.hour)}h
             </p>
           )}
