@@ -1,0 +1,23 @@
+{
+  "name": "Wattly - Precio de la Luz",
+  "short_name": "Wattly",
+  "description": "Consulta el precio de la electricidad en España hora a hora",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon.webp",
+      "type": "image/webp",
+      "sizes": "256x256",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.ico",
+      "type": "image/x-icon",
+      "sizes": "48x48"
+    }
+  ]
+}
