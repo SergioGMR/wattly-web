@@ -1,37 +1,16 @@
 ---
 import type { HourlyPrice } from '../lib/types';
-import { formatPrice, formatHour } from '../lib/format';
+import { formatDateShort } from '../lib/format';
+import CurrentPrice from '../islands/CurrentPrice';
 
 interface Props {
-  current: HourlyPrice;
+  hourly: HourlyPrice[];
+  fallbackCurrent: HourlyPrice;
+  date: string;
 }
 
-const { current } = Astro.props;
-
-const colorMap = {
-  green: { bg: 'bg-price-green-bg', text: 'text-price-green', label: 'Precio bajo' },
-  orange: { bg: 'bg-price-orange-bg', text: 'text-price-orange', label: 'Precio medio' },
-  red: { bg: 'bg-price-red-bg', text: 'text-price-red', label: 'Precio alto' },
-};
-
-const { bg, text, label } = colorMap[current.color];
+const { hourly, fallbackCurrent, date } = Astro.props;
+const dateShort = formatDateShort(date);
 ---
 
-<section
-  class={`glass-card hero-glow relative overflow-hidden p-5 sm:p-8 ${bg} text-center`}
-  aria-label="Precio actual de la electricidad"
->
-  <p
-    class="relative z-10 text-xs font-medium tracking-widest text-gray-500 uppercase dark:text-slate-400"
-  >
-    Precio ahora ({formatHour(current.hour)}h)
-  </p>
-  <p class={`relative z-10 mt-2 text-4xl font-bold tabular-nums sm:text-6xl ${text}`}>
-    {formatPrice(current.price)}
-  </p>
-  <p
-    class={`relative z-10 mt-3 inline-block rounded-full border border-current/20 px-3 py-1 text-sm font-semibold backdrop-blur-sm ${text} bg-white/20 dark:bg-white/5`}
-  >
-    {label}
-  </p>
-</section>
+<CurrentPrice client:load hourly={hourly} fallbackCurrent={fallbackCurrent} dateShort={dateShort} />

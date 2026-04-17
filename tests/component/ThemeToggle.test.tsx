@@ -1,11 +1,37 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/preact';
 import ThemeToggle from '../../src/islands/ThemeToggle';
 
+const storageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: vi.fn((i: number) => Object.keys(store)[i] ?? null),
+  };
+})();
+
 describe('ThemeToggle', () => {
   beforeEach(() => {
-    localStorage.clear();
+    Object.defineProperty(window, 'localStorage', { value: storageMock, writable: true });
+    storageMock.clear();
+    vi.clearAllMocks();
     document.documentElement.classList.remove('dark');
+  });
+
+  afterEach(() => {
+    storageMock.clear();
   });
 
   it('renders three radio buttons (light, dark, system)', () => {

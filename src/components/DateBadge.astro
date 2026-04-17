@@ -1,0 +1,14 @@
+---
+import { formatDate } from '../lib/format';
+
+interface Props {
+  date: string;
+}
+
+const { date } = Astro.props;
+const formatted = formatDate(date);
+---
+
+<p class="text-center text-sm text-gray-500 dark:text-slate-400">
+  Datos del <time datetime={date} class="font-medium">{formatted}</time>
+</p>

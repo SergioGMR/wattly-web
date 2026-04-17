@@ -37,3 +37,80 @@ export function formatDate(dateStr: string): string {
 export function formatHourIndex(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
 }
+
+/**
+ * Format a date string (YYYY-MM-DD) as short day + month.
+ * e.g. "2026-04-17" → "17 abr"
+ */
+export function formatDateShort(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat('es-ES', {
+    day: 'numeric',
+    month: 'short',
+  })
+    .format(date)
+    .replace(/\.$/, '');
+}
+
+function getHourIndexForTz(now: Date, timeZone: string): number {
+  const h = new Intl.DateTimeFormat('es-ES', {
+    timeZone,
+    hour: '2-digit',
+    hour12: false,
+  }).format(now);
+  const n = parseInt(h, 10);
+  return n === 24 ? 0 : n;
+}
+
+/**
+ * Peninsular Spain current hour (0-23), ignoring client TZ.
+ * Used to index the hourly price array (PVPC publishes peninsular hours).
+ */
+export function getPeninsularHourIndex(now: Date = new Date()): number {
+  return getHourIndexForTz(now, 'Europe/Madrid');
+}
+
+/**
+ * Resolve the client's IANA timezone, with a safe fallback.
+ */
+export function getUserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Madrid';
+  } catch {
+    return 'Europe/Madrid';
+  }
+}
+
+export interface DisplayHour {
+  hourStr: string;
+  label: string;
+  lookupIndex: number;
+}
+
+/**
+ * Hour shown to the user, adapted to their region.
+ * PVPC applies per local hour of each region (peninsular, Canarias).
+ * `lookupIndex` is the index to use against the 24-value hourly price array
+ * — user's local hour for peninsular/Canarias, peninsular hour as fallback
+ * for foreign TZs.
+ */
+export function getDisplayHour(
+  now: Date = new Date(),
+  userTz: string = getUserTimezone()
+): DisplayHour {
+  const peninsularZones = ['Europe/Madrid', 'Europe/Ceuta'];
+
+  if (peninsularZones.includes(userTz)) {
+    const idx = getPeninsularHourIndex(now);
+    return { hourStr: formatHourIndex(idx), label: '', lookupIndex: idx };
+  }
+
+  if (userTz === 'Atlantic/Canary') {
+    const idx = getHourIndexForTz(now, 'Atlantic/Canary');
+    return { hourStr: formatHourIndex(idx), label: '', lookupIndex: idx };
+  }
+
+  const idx = getPeninsularHourIndex(now);
+  return { hourStr: formatHourIndex(idx), label: 'hora peninsular', lookupIndex: idx };
+}

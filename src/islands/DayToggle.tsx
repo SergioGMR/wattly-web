@@ -1,13 +1,14 @@
 import { useState } from 'preact/hooks';
 import type { HourlyPrice, Highlights } from '../lib/types';
 import PriceChart from './PriceChart';
-import { formatPrice, formatHour } from '../lib/format';
+import { formatPrice, formatHour, formatDateShort } from '../lib/format';
 
 type Day = 'today' | 'tomorrow';
 
 interface DayData {
   prices: HourlyPrice[];
   highlights: Highlights;
+  date: string;
 }
 
 interface Props {
@@ -72,7 +73,7 @@ export default function DayToggle({ today, tomorrow }: Props) {
               : 'bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10'
           }`}
         >
-          Hoy
+          Hoy · {formatDateShort(today.date)}
         </button>
         <button
           role="tab"
@@ -88,7 +89,7 @@ export default function DayToggle({ today, tomorrow }: Props) {
               : 'bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10'
           } disabled:cursor-not-allowed disabled:opacity-40`}
         >
-          Mañana {!tomorrow && '(disponible ~20:00)'}
+          {tomorrow ? `Mañana · ${formatDateShort(tomorrow.date)}` : 'Mañana (disponible ~20:00)'}
         </button>
       </div>
 

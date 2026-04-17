@@ -1,5 +1,6 @@
 ---
 import Layout from '../components/Layout.astro';
+import DateBadge from '../components/DateBadge.astro';
 import PriceHero from '../components/PriceHero.astro';
 import PriceHighlights from '../components/PriceHighlights.astro';
 import ApplianceTips from '../components/ApplianceTips.astro';
@@ -7,6 +8,7 @@ import DayToggle from '../islands/DayToggle';
 import ApplianceConfigurator from '../islands/ApplianceConfigurator';
 import { fetchTodayPrices, fetchTomorrowPrices } from '../lib/api';
 import { PRESET_APPLIANCES, calcApplianceWindow } from '../lib/appliances';
+import { getPeninsularHourIndex, formatHourIndex } from '../lib/format';
 
 // Set edge cache: 1h TTL, 5min stale-while-revalidate
 Astro.response.headers.set('Cache-Control', 's-maxage=3600, stale-while-revalidate=300');
@@ -22,6 +24,16 @@ try {
   console.error('[wattly] Failed to fetch prices:', err);
   fetchError = true;
 }
+
+// Compute current-hour slot ourselves using peninsular TZ. The API's
+// `highlights.current` is buggy: its backend runs UTC and would report the
+// wrong slot during CEST/CET. This bypasses that and also ensures the SSR
+// value matches what the client island resolves for peninsular users → no
+// color flicker on hydration.
+const serverCurrent = todayData
+  ? (todayData.prices.find((p) => p.hour.startsWith(formatHourIndex(getPeninsularHourIndex()))) ??
+    todayData.highlights.current)
+  : null;
 
 // Calculate appliance windows server-side (only if we have data)
 const applianceWindows = todayData
@@ -47,11 +59,18 @@ const applianceWindows = todayData
         </div>
       </div>
     ) : todayData ? (
-      <div class="space-y-6 sm:space-y-10">
+      <div class="space-y-8 sm:space-y-14">
         <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
           Precio de la Luz Hoy en España
         </h1>
-        <PriceHero current={todayData.highlights.current} />
+        <div class="space-y-3">
+          <DateBadge date={todayData.date} />
+          <PriceHero
+            hourly={todayData.prices}
+            fallbackCurrent={serverCurrent!}
+            date={todayData.date}
+          />
+        </div>
 
         <section>
           <h2 class="mb-4 text-xs font-semibold tracking-widest text-blue-500 uppercase dark:text-blue-400">
@@ -59,10 +78,18 @@ const applianceWindows = todayData
           </h2>
           <DayToggle
             client:load
-            today={{ prices: todayData.prices, highlights: todayData.highlights }}
+            today={{
+              prices: todayData.prices,
+              highlights: todayData.highlights,
+              date: todayData.date,
+            }}
             tomorrow={
               tomorrowData
-                ? { prices: tomorrowData.prices, highlights: tomorrowData.highlights }
+                ? {
+                    prices: tomorrowData.prices,
+                    highlights: tomorrowData.highlights,
+                    date: tomorrowData.date,
+                  }
                 : null
             }
           />
