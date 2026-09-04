@@ -10,9 +10,6 @@ import { fetchTodayPrices, fetchTomorrowPrices } from '../lib/api';
 import { PRESET_APPLIANCES, calcApplianceWindow } from '../lib/appliances';
 import { getPeninsularHourIndex, formatHourIndex } from '../lib/format';
 
-// Set edge cache: 1h TTL, 5min stale-while-revalidate
-Astro.response.headers.set('Cache-Control', 's-maxage=3600, stale-while-revalidate=300');
-
 // Fetch prices server-side
 let todayData = null;
 let tomorrowData = null;
@@ -34,6 +31,16 @@ const serverCurrent = todayData
   ? (todayData.prices.find((p) => p.hour.startsWith(formatHourIndex(getPeninsularHourIndex()))) ??
     todayData.highlights.current)
   : null;
+
+// Set cache headers: do not cache errors; edge-cache successful fetches for 5m with browser revalidation
+if (fetchError) {
+  Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+} else {
+  Astro.response.headers.set(
+    'Cache-Control',
+    'public, max-age=0, s-maxage=300, stale-while-revalidate=60'
+  );
+}
 
 // Calculate appliance windows server-side (only if we have data)
 const applianceWindows = todayData

@@ -1,8 +1,8 @@
-const CACHE_NAME = 'wattly-v1';
-const STATIC_CACHE = 'wattly-static-v1';
-const API_CACHE = 'wattly-api-v1';
+const CACHE_NAME = 'wattly-v2';
+const STATIC_CACHE = 'wattly-static-v2';
+const API_CACHE = 'wattly-api-v2';
 
-const STATIC_ASSETS = ['/', '/favicon.svg', '/favicon.ico', '/icon.webp', '/manifest.webmanifest'];
+const STATIC_ASSETS = ['/favicon.svg', '/favicon.ico', '/icon.webp', '/manifest.webmanifest'];
 
 // Install: pre-cache the shell
 self.addEventListener('install', (event) => {
@@ -40,15 +40,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML navigation: stale-while-revalidate
+  // HTML navigation: network-first, offline fallback
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(staleWhileRevalidate(request, CACHE_NAME));
+    event.respondWith(networkFirstNavigation(request, CACHE_NAME));
     return;
   }
 
   // Static assets: cache-first
   event.respondWith(cacheFirst(request, STATIC_CACHE));
 });
+
+async function networkFirstNavigation(request, cacheName) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    return (
+      cached ||
+      new Response(offlineHTML(), {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      })
+    );
+  }
+}
 
 async function networkFirstWithCache(request, cacheName) {
   try {
@@ -68,27 +88,6 @@ async function networkFirstWithCache(request, cacheName) {
       })
     );
   }
-}
-
-async function staleWhileRevalidate(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-
-  const fetchPromise = fetch(request)
-    .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => null);
-
-  return (
-    cached ||
-    (await fetchPromise) ||
-    new Response(offlineHTML(), {
-      status: 200,
-      headers: { 'Content-Type': 'text/html' },
-    })
-  );
 }
 
 async function cacheFirst(request, cacheName) {

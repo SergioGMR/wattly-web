@@ -29,7 +29,7 @@ pnpm vitest run tests/unit/appliances.test.ts
 
 ### Data flow
 
-Price fetching server-side in `src/pages/index.astro`. Calls `src/lib/api.ts` → external API (`PUBLIC_API_URL`, defaults to `https://precio-lux-api.vercel.app`). Appliance window calc (`src/lib/appliances.ts`) also server-side; results passed as props to static components. Page sets `Cache-Control: s-maxage=3600, stale-while-revalidate=300` for edge caching.
+Price fetching server-side in `src/pages/index.astro`. Calls `src/lib/api.ts` → external API (`PUBLIC_API_URL`, defaults to `https://precio-lux-api.vercel.app`). Appliance window calc (`src/lib/appliances.ts`) also server-side; results passed as props to static components. Page sets `Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=60` for edge caching (or `no-store, no-cache, must-revalidate` on fetch error).
 
 ### Islands (Preact, `src/islands/`)
 
