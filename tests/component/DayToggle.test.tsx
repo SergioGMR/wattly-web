@@ -80,6 +80,42 @@ describe('DayToggle', () => {
     expect(screen.queryByText(/disponible a partir/)).toBeNull();
   });
 
+  describe('when tomorrow is a forecast', () => {
+    const tomorrowForecast = {
+      ...tomorrow,
+      isForecast: true,
+    };
+
+    it('tomorrow tab shows (Previsión) text', () => {
+      render(<DayToggle today={today} tomorrow={tomorrowForecast} />);
+      const tab = screen.getByRole('tab', { name: /Mañana/ });
+      expect(tab.textContent).toContain('(Previsión)');
+    });
+
+    it('shows info callout banner when tomorrow tab is selected', () => {
+      render(<DayToggle today={today} tomorrow={tomorrowForecast} />);
+      const tab = screen.getByRole('tab', { name: /Mañana/ });
+      fireEvent.click(tab);
+
+      const banner = screen.getByRole('note', { name: /Aviso de previsión/ });
+      expect(banner).toBeTruthy();
+      expect(banner.textContent).toContain('OMIE');
+      expect(banner.textContent).toContain('20:30');
+    });
+
+    it('does not show callout banner while on today tab', () => {
+      render(<DayToggle today={today} tomorrow={tomorrowForecast} />);
+      expect(screen.queryByRole('note', { name: /Aviso de previsión/ })).toBeNull();
+    });
+
+    it('does not show callout banner when tomorrow is not a forecast', () => {
+      render(<DayToggle today={today} tomorrow={tomorrow} />);
+      const tab = screen.getByRole('tab', { name: /Mañana/ });
+      fireEvent.click(tab);
+      expect(screen.queryByRole('note', { name: /Aviso de previsión/ })).toBeNull();
+    });
+  });
+
   describe('keyboard navigation', () => {
     it('ArrowRight moves to tomorrow tab when available', () => {
       render(<DayToggle today={today} tomorrow={tomorrow} />);

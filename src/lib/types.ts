@@ -13,6 +13,7 @@ export interface PriceData {
   source: string;
   prices: HourlyPrice[];
   highlights: Highlights;
+  isForecast?: boolean;
 }
 
 export interface HourlyPrice {

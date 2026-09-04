@@ -9,6 +9,7 @@ interface DayData {
   prices: HourlyPrice[];
   highlights: Highlights;
   date: string;
+  isForecast?: boolean;
 }
 
 interface Props {
@@ -89,7 +90,11 @@ export default function DayToggle({ today, tomorrow }: Props) {
               : 'bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10'
           } disabled:cursor-not-allowed disabled:opacity-40`}
         >
-          {tomorrow ? `Mañana · ${formatDateShort(tomorrow.date)}` : 'Mañana (disponible ~20:00)'}
+          {tomorrow
+            ? tomorrow.isForecast
+              ? `Mañana · ${formatDateShort(tomorrow.date)} (Previsión)`
+              : `Mañana · ${formatDateShort(tomorrow.date)}`
+            : 'Mañana (disponible ~13:00)'}
         </button>
       </div>
 
@@ -97,6 +102,23 @@ export default function DayToggle({ today, tomorrow }: Props) {
       <div role="tabpanel" id={`panel-${activeDay}`} aria-labelledby={`tab-${activeDay}`}>
         {currentData ? (
           <div class="space-y-4">
+            {currentData.isForecast && (
+              <div
+                class="flex items-start gap-2.5 rounded-xl border border-blue-500/20 bg-blue-500/10 p-3.5 text-xs text-blue-800 sm:text-sm dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300"
+                role="note"
+                aria-label="Aviso de previsión"
+              >
+                <span class="shrink-0 text-base leading-none select-none" aria-hidden="true">
+                  ℹ️
+                </span>
+                <p class="leading-relaxed">
+                  <strong>Previsión preliminar:</strong> estos precios están basados en la subasta
+                  del mercado diario spot de OMIE. Los precios definitivos del PVPC se publican
+                  alrededor de las 20:30.
+                </p>
+              </div>
+            )}
+
             <PriceChart prices={currentData.prices} />
 
             {/* Quick highlights under chart */}
@@ -120,7 +142,7 @@ export default function DayToggle({ today, tomorrow }: Props) {
         ) : (
           <div class="glass-card flex h-48 items-center justify-center">
             <p class="text-gray-500 dark:text-slate-400">
-              Datos de mañana disponibles a partir de las 20:00 (hora España)
+              Datos de mañana disponibles a partir de las 13:00 (hora España)
             </p>
           </div>
         )}

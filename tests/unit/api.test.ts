@@ -4,6 +4,7 @@ import {
   fetchTodayPrices,
   fetchTomorrowPrices,
   fetchReePrices,
+  fetchReeSpotPrices,
   getMadridDateStr,
   DEFAULT_TIMEOUT_MS,
 } from '../../src/lib/api';
@@ -47,6 +48,33 @@ function createMockReeResponse(baseValues?: number[]) {
         id: '1001',
         attributes: {
           title: 'PVPC',
+          values,
+        },
+      },
+    ],
+  };
+}
+
+function createMockReeSpotResponse(baseValues?: number[]) {
+  const defaultValues = Array.from({ length: 96 }, (_, i) => 100 + i);
+  const valuesSource = baseValues ?? defaultValues;
+  const values = valuesSource.map((value, i) => ({
+    value,
+    percentage: 1,
+    datetime: `2026-04-17T${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}:00.000+02:00`,
+  }));
+
+  return {
+    data: {
+      type: 'Precios mercados tiempo real',
+      id: 'mer-pre-tie-rea',
+    },
+    included: [
+      {
+        type: 'Precio mercado spot',
+        id: '600',
+        attributes: {
+          title: 'Precio mercado spot',
           values,
         },
       },
@@ -148,27 +176,40 @@ describe('fetchTodayPrices', () => {
 });
 
 describe('fetchTomorrowPrices', () => {
-  it('returns null on 404 without calling REE', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      json: () => Promise.resolve({}),
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-
-    const result = await fetchTomorrowPrices();
-    expect(result).toBeNull();
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(String(fetchSpy.mock.calls[0][0])).toContain('/api/prices/tomorrow');
-  });
-
-  it('returns data when available from primary API', async () => {
+  it('returns data with isForecast: false when available from primary API', async () => {
     const result = await fetchTomorrowPrices();
     expect(result).not.toBeNull();
     expect(result?.date).toBe('2026-04-16');
+    expect(result?.isForecast).toBe(false);
   });
 
-  it('falls back to REE when primary API returns 500', async () => {
+  it('falls back to REE PVPC when primary API returns 404 and REE PVPC is available', async () => {
+    const mockMultiFetch = vi.fn().mockImplementation(async (url: string | URL | Request) => {
+      const urlStr = String(url);
+      if (urlStr.includes('apidatos.ree.es')) {
+        return {
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(createMockReeResponse()),
+        };
+      }
+      return {
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ error: 'Not found' }),
+      };
+    });
+
+    vi.stubGlobal('fetch', mockMultiFetch);
+
+    const data = await fetchTomorrowPrices();
+    expect(data).not.toBeNull();
+    expect(data?.source).toBe('apidatos.ree.es');
+    expect(data?.isForecast).toBe(false);
+    expect(data?.prices).toHaveLength(24);
+  });
+
+  it('falls back to REE PVPC when primary API returns 500', async () => {
     const mockMultiFetch = vi.fn().mockImplementation(async (url: string | URL | Request) => {
       const urlStr = String(url);
       if (urlStr.includes('apidatos.ree.es')) {
@@ -190,8 +231,35 @@ describe('fetchTomorrowPrices', () => {
     const data = await fetchTomorrowPrices();
     expect(data).not.toBeNull();
     expect(data?.source).toBe('apidatos.ree.es');
+    expect(data?.isForecast).toBe(false);
     expect(data?.prices).toHaveLength(24);
     expect(mockMultiFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to REE spot forecast when primary API 404s and PVPC returns null', async () => {
+    const mockMultiFetch = vi.fn().mockImplementation(async (url: string | URL | Request) => {
+      const urlStr = String(url);
+      if (urlStr.includes('apidatos.ree.es')) {
+        return {
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(createMockReeSpotResponse()),
+        };
+      }
+      return {
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ error: 'Not found' }),
+      };
+    });
+
+    vi.stubGlobal('fetch', mockMultiFetch);
+
+    const data = await fetchTomorrowPrices();
+    expect(data).not.toBeNull();
+    expect(data?.source).toBe('apidatos.ree.es (OMIE Spot)');
+    expect(data?.isForecast).toBe(true);
+    expect(data?.prices).toHaveLength(24);
   });
 
   it('falls back to REE when primary API times out', async () => {
@@ -214,7 +282,7 @@ describe('fetchTomorrowPrices', () => {
     expect(data?.source).toBe('apidatos.ree.es');
   });
 
-  it('returns null when primary API fails and REE also fails', async () => {
+  it('returns null when primary API fails and all REE fallbacks fail', async () => {
     vi.stubGlobal('fetch', mockFetch(500, {}));
     const data = await fetchTomorrowPrices();
     expect(data).toBeNull();
@@ -380,6 +448,190 @@ describe('fetchReePrices', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
     const resultNetErr = await fetchReePrices('2026-04-16');
     expect(resultNetErr).toBeNull();
+  });
+});
+
+describe('fetchReeSpotPrices', () => {
+  it('aggregates 96 15-minute values into 24 hourly prices, converts €/MWh to €/kWh with 4 decimals and sets isForecast: true', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(createMockReeSpotResponse()),
+      })
+    );
+
+    const result = await fetchReeSpotPrices('2026-04-17');
+    expect(result).not.toBeNull();
+    expect(result?.date).toBe('2026-04-17');
+    expect(result?.zone).toBe('peninsula');
+    expect(result?.currency).toBe('EUR');
+    expect(result?.unit).toBe('kWh');
+    expect(result?.source).toBe('apidatos.ree.es (OMIE Spot)');
+    expect(result?.isForecast).toBe(true);
+    expect(result?.prices).toHaveLength(24);
+
+    // Hour 0: (100+101+102+103)/4 = 101.5 €/MWh -> 0.1015 €/kWh
+    expect(result?.prices[0]).toEqual({
+      hour: '00:00-01:00',
+      price: 0.1015,
+      color: 'green',
+    });
+
+    // Hour 23: (192+193+194+195)/4 = 193.5 €/MWh -> 0.1935 €/kWh
+    expect(result?.prices[23]).toEqual({
+      hour: '23:00-24:00',
+      price: 0.1935,
+      color: 'red',
+    });
+  });
+
+  it('handles 24 direct hourly values correctly', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve(
+            createMockReeSpotResponse(Array.from({ length: 24 }, (_, i) => (i + 1) * 10))
+          ),
+      })
+    );
+
+    const result = await fetchReeSpotPrices('2026-04-17');
+    expect(result).not.toBeNull();
+    expect(result?.prices).toHaveLength(24);
+    expect(result?.prices[0]).toEqual({
+      hour: '00:00-01:00',
+      price: 0.01,
+      color: 'green',
+    });
+    expect(result?.prices[23]).toEqual({
+      hour: '23:00-24:00',
+      price: 0.24,
+      color: 'red',
+    });
+  });
+
+  it('assigns 8 green, 8 orange, and 8 red colors for 24 hours', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(createMockReeSpotResponse()),
+      })
+    );
+
+    const result = await fetchReeSpotPrices('2026-04-17');
+    const greens = result?.prices.filter((p) => p.color === 'green') ?? [];
+    const oranges = result?.prices.filter((p) => p.color === 'orange') ?? [];
+    const reds = result?.prices.filter((p) => p.color === 'red') ?? [];
+
+    expect(greens).toHaveLength(8);
+    expect(oranges).toHaveLength(8);
+    expect(reds).toHaveLength(8);
+  });
+
+  it('calculates highlights: average, min, max, current', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(createMockReeSpotResponse()),
+      })
+    );
+
+    const result = await fetchReeSpotPrices('2026-04-17');
+    expect(result?.highlights.min.price).toBe(0.1015);
+    expect(result?.highlights.max.price).toBe(0.1935);
+    expect(result?.highlights.average).toBeGreaterThan(0.1);
+    expect(result?.highlights.current).toBeDefined();
+    expect(result?.highlights.current.hour).toMatch(/^\d{2}:00-\d{2}:00$/);
+  });
+
+  it('finds indicator by title === "Precio mercado spot"', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            included: [
+              {
+                id: 'different-id',
+                attributes: {
+                  title: 'Precio mercado spot',
+                  values: Array.from({ length: 24 }, (_, i) => ({ value: (i + 1) * 10 })),
+                },
+              },
+            ],
+          }),
+      })
+    );
+
+    const result = await fetchReeSpotPrices('2026-04-17');
+    expect(result).not.toBeNull();
+    expect(result?.prices).toHaveLength(24);
+  });
+
+  it('returns null if indicator 600 or spot title is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            included: [
+              {
+                id: '1001',
+                type: 'PVPC',
+                attributes: { values: [{ value: 100 }] },
+              },
+            ],
+          }),
+      })
+    );
+
+    const result = await fetchReeSpotPrices('2026-04-17');
+    expect(result).toBeNull();
+  });
+
+  it('returns null if values are empty', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            included: [
+              {
+                id: '600',
+                attributes: { values: [] },
+              },
+            ],
+          }),
+      })
+    );
+
+    const result = await fetchReeSpotPrices('2026-04-17');
+    expect(result).toBeNull();
+  });
+
+  it('returns null on HTTP error or network failure', async () => {
+    vi.stubGlobal('fetch', mockFetch(500, { error: 'Server error' }));
+    const result500 = await fetchReeSpotPrices('2026-04-17');
+    expect(result500).toBeNull();
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+    const resultNet = await fetchReeSpotPrices('2026-04-17');
+    expect(resultNet).toBeNull();
   });
 });
 
