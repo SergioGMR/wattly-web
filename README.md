@@ -53,7 +53,7 @@ Wattly es una webapp que muestra el **precio de la electricidad (PVPC)** en Espa
 | Framework   | [Astro](https://astro.build) SSR                                    |
 | UI Islands  | [Preact](https://preactjs.com) (hydrate on demand)                  |
 | Estilos     | [Tailwind CSS v4](https://tailwindcss.com) (CSS-first config)       |
-| Charts      | [Chart.js](https://www.chartjs.org)                                 |
+| Charts      | Native SVG (Preact)                                                 |
 | Deploy      | [Vercel](https://vercel.com) (edge cache 1h + SWR 5min)             |
 | Tests       | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) |
 | Lint/Format | ESLint + Prettier + Husky pre-commit                                |
@@ -73,7 +73,7 @@ src/
 │   └── ApplianceTips.astro       # Preset appliance recommendations
 ├── islands/                      # Preact islands (client-hydrated)
 │   ├── DayToggle.tsx             # Today/tomorrow tab navigation
-│   ├── PriceChart.tsx            # Chart.js bar chart
+│   ├── PriceChart.tsx            # Native SVG bar chart
 │   ├── ApplianceConfigurator.tsx # Custom appliance manager
 │   ├── ThemeToggle.tsx           # Light/dark/system toggle
 │   └── OfflineBanner.tsx         # Offline notification

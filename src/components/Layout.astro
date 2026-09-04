@@ -18,7 +18,7 @@ const siteUrl = 'https://wattly-alpha.vercel.app/';
 
 const pageTitle =
   highlights && date
-    ? `Precio de la Luz Hoy — ${formatDate(date)} | Desde ${formatPrice(highlights.min.price)}`
+    ? `Precio de la Luz Hoy — ${formatDate(date)} | Desde ${formatPrice(highlights.min.price)} | ${siteTitle}`
     : `${siteTitle} — Precio de la luz en tiempo real`;
 
 const pageDescription = highlights

@@ -24,8 +24,8 @@ test('price hero is visible', async ({ page }) => {
 
 test('chart is visible with correct role', async ({ page }) => {
   await page.goto('/');
-  const canvas = page.locator('canvas');
-  await expect(canvas).toBeVisible();
+  const chart = page.locator('svg[role="img"]');
+  await expect(chart).toBeVisible();
 });
 
 test('highlights show min, max and average', async ({ page }) => {

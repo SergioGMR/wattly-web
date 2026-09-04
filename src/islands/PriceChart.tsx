@@ -1,30 +1,59 @@
-import { useEffect, useRef } from 'preact/hooks';
-import {
-  Chart,
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { useState } from 'preact/hooks';
 import type { HourlyPrice } from '../lib/types';
 import { formatHour, formatPrice } from '../lib/format';
 
-Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
-
-const COLOR_MAP = {
-  light: { green: '#16a34a', orange: '#ea580c', red: '#dc2626' },
-  dark: { green: '#4ade80', orange: '#fbbf24', red: '#f87171' },
+const COLOR_CLASSES: Record<HourlyPrice['color'], string> = {
+  green: 'fill-[#16a34a] dark:fill-[#4ade80]',
+  orange: 'fill-[#ea580c] dark:fill-[#fbbf24]',
+  red: 'fill-[#dc2626] dark:fill-[#f87171]',
 };
 
-const CHART_CHROME = {
-  light: { grid: 'rgba(0,0,0,0.06)', tick: '#6b7280' },
-  dark: { grid: 'rgba(255,255,255,0.06)', tick: '#64748b' },
-};
+function formatTick(val: number): string {
+  const formatted = new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 3,
+  }).format(val);
+  return `${formatted} €/kWh`;
+}
 
-function getMode(): 'light' | 'dark' {
-  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+function shouldShowTick(index: number, total: number): boolean {
+  if (total <= 7) return true;
+  return (
+    index === 0 ||
+    index === 4 ||
+    index === 8 ||
+    index === 12 ||
+    index === 16 ||
+    index === 20 ||
+    index === total - 1
+  );
+}
+
+function formatHourTick(hourStr: string, index: number): string {
+  const start = hourStr.split('-')[0];
+  if (start && start.includes(':')) {
+    return `${start.split(':')[0]}h`;
+  }
+  return `${String(index).padStart(2, '0')}h`;
+}
+
+function calculateYScale(prices: HourlyPrice[]) {
+  const maxPrice = Math.max(...prices.map((p) => p.price), 0);
+  const targetMax = maxPrice > 0 ? maxPrice * 1.1 : 0.1;
+
+  const roughStep = targetMax / 4;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep || 0.01)));
+  const normalized = roughStep / magnitude;
+  let niceStep: number;
+  if (normalized <= 1) niceStep = 1 * magnitude;
+  else if (normalized <= 2) niceStep = 2 * magnitude;
+  else if (normalized <= 2.5) niceStep = 2.5 * magnitude;
+  else if (normalized <= 5) niceStep = 5 * magnitude;
+  else niceStep = 10 * magnitude;
+
+  const yMax = niceStep * 4;
+  const ticks = [0, niceStep, niceStep * 2, niceStep * 3, yMax];
+  return { yMax, ticks };
 }
 
 interface Props {
@@ -32,75 +61,7 @@ interface Props {
 }
 
 export default function PriceChart({ prices }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef = useRef<Chart | null>(null);
-
-  function buildChart() {
-    const canvas = canvasRef.current;
-    if (!canvas || prices.length === 0) return;
-
-    if (chartRef.current) {
-      chartRef.current.destroy();
-    }
-
-    const mode = getMode();
-    const colors = COLOR_MAP[mode];
-    const chrome = CHART_CHROME[mode];
-
-    chartRef.current = new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels: prices.map((p) => formatHour(p.hour)),
-        datasets: [
-          {
-            label: '€/kWh',
-            data: prices.map((p) => p.price),
-            backgroundColor: prices.map((p) => colors[p.color]),
-            borderRadius: 4,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => ` ${formatPrice(ctx.parsed.y)}`,
-              title: (items) => `${items[0].label}h`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            ticks: { color: chrome.tick },
-            grid: { color: chrome.grid },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: chrome.tick,
-              callback: (val) => `${Number(val).toFixed(2)}€`,
-            },
-            grid: { color: chrome.grid },
-          },
-        },
-      },
-    });
-  }
-
-  useEffect(() => {
-    buildChart();
-
-    const handleThemeChange = () => buildChart();
-    window.addEventListener('wattly:theme-change', handleThemeChange);
-
-    return () => {
-      chartRef.current?.destroy();
-      window.removeEventListener('wattly:theme-change', handleThemeChange);
-    };
-  }, [prices]);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   if (prices.length === 0) {
     return (
@@ -113,14 +74,195 @@ export default function PriceChart({ prices }: Props) {
   const colorLabel = (color: string) =>
     color === 'green' ? 'Bajo' : color === 'orange' ? 'Medio' : 'Alto';
 
+  // SVG dimensions & margins
+  const plotLeft = 75;
+  const plotTop = 20;
+  const plotWidth = 705;
+  const plotHeight = 180;
+  const plotBottom = plotTop + plotHeight;
+
+  const { yMax, ticks } = calculateYScale(prices);
+  const slotWidth = plotWidth / prices.length;
+
   return (
     <div>
       <div class="relative h-48 w-full sm:h-64">
-        <canvas
-          ref={canvasRef}
+        <svg
+          viewBox="0 0 800 240"
           role="img"
           aria-label="Gráfico de precios de la electricidad por hora"
-        />
+          class="h-full w-full overflow-visible"
+        >
+          {/* Y-axis grid lines and tick labels */}
+          {ticks.map((t) => {
+            const y = plotBottom - (t / yMax) * plotHeight;
+            return (
+              <g key={`y-${t}`}>
+                <line
+                  x1={plotLeft}
+                  y1={y}
+                  x2={plotLeft + plotWidth}
+                  y2={y}
+                  class="stroke-gray-200 dark:stroke-slate-800"
+                  stroke-width="1"
+                  stroke-dasharray={t === 0 ? undefined : '3 3'}
+                />
+                <text
+                  x={plotLeft - 8}
+                  y={y}
+                  text-anchor="end"
+                  dominant-baseline="middle"
+                  class="fill-gray-500 text-[10px] font-medium tabular-nums select-none dark:fill-slate-400"
+                >
+                  {formatTick(t)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* X-axis baseline */}
+          <line
+            x1={plotLeft}
+            y1={plotBottom}
+            x2={plotLeft + plotWidth}
+            y2={plotBottom}
+            class="stroke-gray-300 dark:stroke-slate-700"
+            stroke-width="1"
+          />
+
+          {/* X-axis hour ticks */}
+          {prices.map((p, i) => {
+            if (!shouldShowTick(i, prices.length)) return null;
+            const slotCenterX = plotLeft + i * slotWidth + slotWidth / 2;
+            return (
+              <g key={`xtick-${p.hour}`}>
+                <line
+                  x1={slotCenterX}
+                  y1={plotBottom}
+                  x2={slotCenterX}
+                  y2={plotBottom + 4}
+                  class="stroke-gray-300 dark:stroke-slate-700"
+                  stroke-width="1"
+                />
+                <text
+                  x={slotCenterX}
+                  y={plotBottom + 18}
+                  text-anchor="middle"
+                  class="fill-gray-500 text-[11px] select-none dark:fill-slate-400"
+                >
+                  {formatHourTick(p.hour, i)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Bars */}
+          {prices.map((p, i) => {
+            const slotX = plotLeft + i * slotWidth;
+            const barWidth = Math.min(22, Math.max(6, slotWidth - 4));
+            const barX = slotX + (slotWidth - barWidth) / 2;
+            const rawHeight = yMax > 0 ? (p.price / yMax) * plotHeight : 0;
+            const barHeight = Math.max(2, rawHeight);
+            const barY = plotBottom - barHeight;
+            const isHovered = hoveredIndex === i;
+
+            return (
+              <g
+                key={p.hour}
+                class="cursor-pointer focus:outline-none"
+                tabIndex={0}
+                role="graphics-symbol"
+                aria-label={`${formatHour(p.hour)}h: ${formatPrice(p.price)}`}
+                onMouseEnter={() => setHoveredIndex(i)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                onFocus={() => setHoveredIndex(i)}
+                onBlur={() => setHoveredIndex(null)}
+                onTouchStart={() => setHoveredIndex(i)}
+              >
+                <title>{`${formatHour(p.hour)}h: ${formatPrice(p.price)}`}</title>
+                {/* Full column invisible hit area for responsive hovering */}
+                <rect
+                  x={slotX}
+                  y={plotTop}
+                  width={slotWidth}
+                  height={plotHeight}
+                  fill="transparent"
+                />
+                {/* Visual bar */}
+                <rect
+                  x={barX}
+                  y={barY}
+                  width={barWidth}
+                  height={barHeight}
+                  rx={3}
+                  ry={3}
+                  class={`${COLOR_CLASSES[p.color]} transition-opacity duration-150 ${
+                    hoveredIndex !== null && !isHovered ? 'opacity-45' : 'opacity-100'
+                  }`}
+                />
+              </g>
+            );
+          })}
+
+          {/* Hover tooltip */}
+          {hoveredIndex !== null &&
+            prices[hoveredIndex] &&
+            (() => {
+              const hovered = prices[hoveredIndex];
+              const slotCenterX = plotLeft + hoveredIndex * slotWidth + slotWidth / 2;
+              const rawHeight = yMax > 0 ? (hovered.price / yMax) * plotHeight : 0;
+              const barY = plotBottom - Math.max(2, rawHeight);
+              const tooltipWidth = 110;
+              const tooltipHeight = 42;
+              const tooltipX = Math.max(
+                plotLeft,
+                Math.min(plotLeft + plotWidth - tooltipWidth, slotCenterX - tooltipWidth / 2)
+              );
+              const tooltipY = barY > plotTop + 50 ? barY - 48 : barY + 8;
+
+              return (
+                <g pointer-events="none" class="transition-all duration-150">
+                  {/* Guideline */}
+                  <line
+                    x1={slotCenterX}
+                    y1={plotTop}
+                    x2={slotCenterX}
+                    y2={plotBottom}
+                    class="stroke-gray-400/40 dark:stroke-slate-500/40"
+                    stroke-width="1"
+                    stroke-dasharray="2 2"
+                  />
+                  {/* Tooltip Card */}
+                  <rect
+                    x={tooltipX}
+                    y={tooltipY}
+                    width={tooltipWidth}
+                    height={tooltipHeight}
+                    rx={6}
+                    ry={6}
+                    class="fill-gray-900/90 stroke-gray-700/50 dark:fill-slate-800/95 dark:stroke-slate-600/50"
+                    stroke-width="1"
+                  />
+                  <text
+                    x={tooltipX + tooltipWidth / 2}
+                    y={tooltipY + 16}
+                    text-anchor="middle"
+                    class="fill-gray-200 text-[11px] font-medium select-none dark:fill-slate-200"
+                  >
+                    {formatHour(hovered.hour)}h
+                  </text>
+                  <text
+                    x={tooltipX + tooltipWidth / 2}
+                    y={tooltipY + 32}
+                    text-anchor="middle"
+                    class="fill-white text-xs font-bold tabular-nums select-none dark:fill-emerald-400"
+                  >
+                    {formatPrice(hovered.price)}
+                  </text>
+                </g>
+              );
+            })()}
+        </svg>
       </div>
       <details class="mt-2">
         <summary class="cursor-pointer text-sm text-blue-500 dark:text-blue-400">

@@ -37,7 +37,6 @@
     "@tailwindcss/vite": "^4.3.3",
     "@vercel/analytics": "^2.0.1",
     "astro": "^7.3.1",
-    "chart.js": "^4.5.1",
     "preact": "^10.29.8",
     "tailwindcss": "^4.3.3"
   },

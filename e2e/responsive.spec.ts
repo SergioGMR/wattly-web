@@ -28,6 +28,6 @@ for (const { name, width, height } of viewports) {
     // Key elements visible
     await expect(page.locator('header')).toBeVisible();
     await expect(page.getByText(/Precio ahora/)).toBeVisible();
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('svg[role="img"]')).toBeVisible();
   });
 }

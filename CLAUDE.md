@@ -35,7 +35,7 @@ Price fetching server-side in `src/pages/index.astro`. Calls `src/lib/api.ts` �
 
 Hydrate client-side only when needed:
 
-- `DayToggle` — `client:load` — tab UI today/tomorrow prices; renders `PriceChart` (Chart.js)
+- `DayToggle` — `client:load` — tab UI today/tomorrow prices; renders `PriceChart` (Native SVG)
 - `ApplianceConfigurator` — `client:visible` — user-defined appliances persisted in `localStorage` under key `wattly:custom-appliances`; recalcs best window client-side using same `calcApplianceWindow` from `src/lib/appliances.ts`
 
 ### Static components (Astro, `src/components/`)

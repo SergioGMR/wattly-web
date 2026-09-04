@@ -1,21 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/preact';
 import DayToggle from '../../src/islands/DayToggle';
 import type { HourlyPrice, Highlights } from '../../src/lib/types';
-
-vi.mock('chart.js', () => ({
-  Chart: class MockChart {
-    static register() {}
-    constructor() {}
-    destroy() {}
-  },
-  BarController: {},
-  BarElement: {},
-  CategoryScale: {},
-  LinearScale: {},
-  Tooltip: {},
-  Legend: {},
-}));
 
 const makePrices = (base: number): HourlyPrice[] =>
   Array.from({ length: 24 }, (_, i) => ({
