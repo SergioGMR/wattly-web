@@ -1,13 +1,7 @@
 ---
 import Layout from '../components/Layout.astro';
-import DateBadge from '../components/DateBadge.astro';
-import PriceHero from '../components/PriceHero.astro';
-import PriceHighlights from '../components/PriceHighlights.astro';
-import ApplianceTips from '../components/ApplianceTips.astro';
 import DayToggle from '../islands/DayToggle';
-import ApplianceConfigurator from '../islands/ApplianceConfigurator';
 import { fetchTodayPrices, fetchTomorrowPrices } from '../lib/api';
-import { PRESET_APPLIANCES, calcApplianceWindow } from '../lib/appliances';
 import { getPeninsularHourIndex, formatHourIndex } from '../lib/format';
 
 // Fetch prices server-side
@@ -41,11 +35,6 @@ if (fetchError) {
     'public, max-age=0, s-maxage=300, stale-while-revalidate=60'
   );
 }
-
-// Calculate appliance windows server-side (only if we have data)
-const applianceWindows = todayData
-  ? PRESET_APPLIANCES.map((appliance) => calcApplianceWindow(appliance, todayData!.prices))
-  : [];
 ---
 
 <Layout date={todayData?.date} highlights={todayData?.highlights}>
@@ -53,7 +42,7 @@ const applianceWindows = todayData
     fetchError ? (
       <div class="space-y-6">
         <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
-          Precio de la Luz Hoy en España
+          Precio de la Luz en España
         </h1>
         <div class="glass-card border-red-500/20 p-6 text-center dark:border-red-500/20">
           <p class="text-lg font-medium text-red-700 dark:text-red-400">
@@ -66,48 +55,29 @@ const applianceWindows = todayData
         </div>
       </div>
     ) : todayData ? (
-      <div class="space-y-8 sm:space-y-14">
+      <div class="space-y-6 sm:space-y-8">
         <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
-          Precio de la Luz Hoy en España
+          Precio de la Luz en España
         </h1>
-        <div class="space-y-3">
-          <DateBadge date={todayData.date} />
-          <PriceHero
-            hourly={todayData.prices}
-            fallbackCurrent={serverCurrent!}
-            date={todayData.date}
-          />
-        </div>
-
-        <section>
-          <h2 class="mb-4 text-xs font-semibold tracking-widest text-blue-500 uppercase dark:text-blue-400">
-            Precios por hora
-          </h2>
-          <DayToggle
-            client:load
-            today={{
-              prices: todayData.prices,
-              highlights: todayData.highlights,
-              date: todayData.date,
-            }}
-            tomorrow={
-              tomorrowData
-                ? {
-                    prices: tomorrowData.prices,
-                    highlights: tomorrowData.highlights,
-                    date: tomorrowData.date,
-                    isForecast: tomorrowData.isForecast,
-                  }
-                : null
-            }
-          />
-        </section>
-
-        <PriceHighlights highlights={todayData.highlights} />
-
-        <ApplianceTips windows={applianceWindows} />
-
-        <ApplianceConfigurator client:visible prices={todayData.prices} />
+        <DayToggle
+          client:load
+          today={{
+            prices: todayData.prices,
+            highlights: todayData.highlights,
+            date: todayData.date,
+          }}
+          tomorrow={
+            tomorrowData
+              ? {
+                  prices: tomorrowData.prices,
+                  highlights: tomorrowData.highlights,
+                  date: tomorrowData.date,
+                  isForecast: tomorrowData.isForecast,
+                }
+              : null
+          }
+          serverCurrent={serverCurrent!}
+        />
       </div>
     ) : null
   }

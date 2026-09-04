@@ -73,6 +73,32 @@ describe('DayToggle', () => {
     expect(tomorrowTab.getAttribute('aria-selected')).toBe('true');
   });
 
+  it('updates highlights and appliance tips when clicking tomorrow tab', () => {
+    render(<DayToggle today={today} tomorrow={tomorrow} />);
+
+    // Initially shows today's highlights and appliance tips
+    const highlightsSection = screen.getByRole('region', { name: 'Resumen de precios del día' });
+    expect(highlightsSection.textContent).toContain('0,050 €/kWh');
+    expect(highlightsSection.textContent).toContain('0,280 €/kWh');
+
+    const tipsSection = screen.getByRole('region', {
+      name: 'Mejores horas para electrodomésticos',
+    });
+    expect(tipsSection.textContent).toContain('0,055 €/kWh');
+
+    // Switch to tomorrow
+    const tomorrowTab = screen.getByRole('tab', { name: /Mañana/ });
+    fireEvent.click(tomorrowTab);
+
+    // Now shows tomorrow's highlights and appliance tips
+    expect(highlightsSection.textContent).toContain('0,070 €/kWh');
+    expect(highlightsSection.textContent).toContain('0,300 €/kWh');
+    expect(highlightsSection.textContent).not.toContain('0,050 €/kWh');
+
+    expect(tipsSection.textContent).toContain('0,075 €/kWh');
+    expect(tipsSection.textContent).not.toContain('0,055 €/kWh');
+  });
+
   it('shows unavailable message when tomorrow is null and tab would be clicked', () => {
     render(<DayToggle today={today} tomorrow={null} />);
     // The fallback message should not appear since today is shown by default
