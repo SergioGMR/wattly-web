@@ -68,35 +68,30 @@ interface ReeApiResponse {
   included?: ReeIncludedItem[];
 }
 
-function assignColors(hourlyPrices: { hour: string; price: number }[]): HourlyPrice[] {
-  if (hourlyPrices.length === 24) {
-    const sorted = hourlyPrices
-      .map((p, index) => ({ index, price: p.price }))
-      .sort((a, b) => a.price - b.price);
-
-    const greenIndices = new Set(sorted.slice(0, 8).map((s) => s.index));
-    const redIndices = new Set(sorted.slice(16).map((s) => s.index));
-
-    return hourlyPrices.map((p, i) => ({
-      ...p,
-      color: greenIndices.has(i) ? 'green' : redIndices.has(i) ? 'red' : 'orange',
-    }));
+export function assignColors(hourlyPrices: { hour: string; price: number }[]): HourlyPrice[] {
+  if (hourlyPrices.length === 0) {
+    return [];
   }
 
-  const minPrice = Math.min(...hourlyPrices.map((p) => p.price));
-  const maxPrice = Math.max(...hourlyPrices.map((p) => p.price));
-  const range = maxPrice - minPrice;
+  const rounded = hourlyPrices.map((p) => Math.round(p.price * 1000) / 1000);
+  const sorted = [...rounded].sort((a, b) => a - b);
+
+  const greenIndex = Math.min(7, sorted.length - 1);
+  const redIndex = Math.max(greenIndex, Math.min(16, sorted.length - 1));
+  const greenCutoff = sorted[greenIndex];
+  const redCutoff = sorted[redIndex];
 
   return hourlyPrices.map((p) => {
-    let color: 'green' | 'orange' | 'red' = 'orange';
-    if (range > 0) {
-      if (p.price <= minPrice + range * 0.33) {
-        color = 'green';
-      } else if (p.price >= minPrice + range * 0.67) {
-        color = 'red';
-      }
-    } else {
+    const roundedPrice = Math.round(p.price * 1000) / 1000;
+    let color: 'green' | 'orange' | 'red';
+    if (greenCutoff === redCutoff) {
       color = 'green';
+    } else if (roundedPrice <= greenCutoff) {
+      color = 'green';
+    } else if (roundedPrice >= redCutoff) {
+      color = 'red';
+    } else {
+      color = 'orange';
     }
     return { ...p, color };
   });
@@ -146,7 +141,7 @@ export async function fetchReePrices(
 
   const pvpc = included.find((item) => String(item.id) === '1001' || item.type === 'PVPC');
 
-  if (!pvpc?.attributes?.values || pvpc.attributes.values.length === 0) {
+  if (!pvpc?.attributes?.values || pvpc.attributes.values.length < 23) {
     return null;
   }
 
@@ -240,7 +235,7 @@ export async function fetchReeSpotPrices(
       item.type === 'Precio mercado spot'
   );
 
-  if (!spot?.attributes?.values || spot.attributes.values.length === 0) {
+  if (!spot?.attributes?.values || spot.attributes.values.length < 23) {
     return null;
   }
 
@@ -270,7 +265,7 @@ export async function fetchReeSpotPrices(
     }
   }
 
-  if (hourlyMwh.length === 0) {
+  if (hourlyMwh.length < 23) {
     return null;
   }
 
@@ -313,61 +308,131 @@ export async function fetchReeSpotPrices(
 }
 
 export async function fetchTodayPrices(): Promise<PriceData> {
-  let primaryError: Error | null = null;
+  const todayMadridStr = getMadridDateStr(0);
+  let reeError: Error | null = null;
 
+  // 1. Primary: REE official API
   try {
-    const data = await fetchPrices('/api/prices/today');
-    if (data) {
-      return { ...data, isForecast: false };
+    const reeData = await fetchReePrices(todayMadridStr);
+    if (reeData && reeData.prices.length >= 23) {
+      return { ...reeData, isForecast: false };
     }
-    primaryError = new Error('Today prices returned 404 unexpectedly');
-    console.warn('[wattly] Primary API returned 404 for today. Falling back to REE...');
+    if (reeData && reeData.prices.length < 23) {
+      console.warn(
+        `[wattly] REE returned incomplete data (${reeData.prices.length} hours) for today. Falling back to primary API...`
+      );
+    }
   } catch (err) {
-    primaryError = err instanceof Error ? err : new Error(String(err));
+    reeError = err instanceof Error ? err : new Error(String(err));
     console.warn(
-      `[wattly] Primary API failed for today prices: ${primaryError.message}. Falling back to REE...`
+      `[wattly] REE API failed for today prices: ${reeError.message}. Falling back to primary API...`
     );
   }
 
+  // 2. Fallback: primary API (precio-lux-api)
   try {
-    const reeData = await fetchReePrices(getMadridDateStr(0));
-    if (reeData) {
-      return { ...reeData, isForecast: false };
+    const data = await fetchPrices('/api/prices/today');
+    if (data && data.prices.length >= 23) {
+      const prices = assignColors(data.prices);
+      const min = prices.reduce((lowest, p) => (p.price < lowest.price ? p : lowest), prices[0]);
+      const max = prices.reduce((highest, p) => (p.price > highest.price ? p : highest), prices[0]);
+      const currentHourIndex = getPeninsularHourIndex();
+      const current =
+        prices.find((p) => p.hour.startsWith(`${String(currentHourIndex).padStart(2, '0')}:`)) ??
+        prices[currentHourIndex] ??
+        prices[0];
+
+      return {
+        ...data,
+        isForecast: false,
+        prices,
+        highlights: {
+          ...data.highlights,
+          min,
+          max,
+          current,
+        },
+      };
     }
-  } catch (reeErr) {
-    console.warn(`[wattly] REE fallback failed for today prices: ${String(reeErr)}`);
+    if (data && data.prices.length < 23) {
+      console.warn(
+        `[wattly] Primary API returned incomplete data (${data.prices.length} hours) for today.`
+      );
+    }
+  } catch (fallbackErr) {
+    console.warn(`[wattly] Primary API fallback failed for today prices: ${String(fallbackErr)}`);
+    throw fallbackErr;
   }
 
-  throw primaryError ?? new Error('Failed to fetch today prices from primary API and REE fallback');
+  throw (
+    reeError ?? new Error('Failed to fetch complete today prices from REE and primary API fallback')
+  );
 }
 
 export async function fetchTomorrowPrices(): Promise<PriceData | null> {
   const tomorrowMadridStr = getMadridDateStr(1);
 
+  // 1. Primary: REE official API (PVPC)
+  try {
+    const reeData = await fetchReePrices(tomorrowMadridStr);
+    if (reeData && reeData.prices.length >= 23) {
+      return { ...reeData, isForecast: false };
+    }
+    if (reeData && reeData.prices.length < 23) {
+      console.warn(
+        `[wattly] REE returned incomplete data (${reeData.prices.length} hours) for tomorrow.`
+      );
+    }
+  } catch (err) {
+    console.warn(`[wattly] REE API failed for tomorrow prices: ${String(err)}`);
+  }
+
+  // 2. Fallback: primary API (precio-lux-api)
   try {
     const data = await fetchPrices('/api/prices/tomorrow');
-    if (data) {
-      return { ...data, isForecast: false };
+    if (data && data.prices.length >= 23) {
+      const prices = assignColors(data.prices);
+      const min = prices.reduce((lowest, p) => (p.price < lowest.price ? p : lowest), prices[0]);
+      const max = prices.reduce((highest, p) => (p.price > highest.price ? p : highest), prices[0]);
+      const currentHourIndex = getPeninsularHourIndex();
+      const current =
+        prices.find((p) => p.hour.startsWith(`${String(currentHourIndex).padStart(2, '0')}:`)) ??
+        prices[currentHourIndex] ??
+        prices[0];
+
+      return {
+        ...data,
+        isForecast: false,
+        prices,
+        highlights: {
+          ...data.highlights,
+          min,
+          max,
+          current,
+        },
+      };
+    }
+    if (data && data.prices.length < 23) {
+      console.warn(
+        `[wattly] Primary API returned incomplete data (${data.prices.length} hours) for tomorrow.`
+      );
     }
   } catch (err) {
     console.warn(
-      `[wattly] Primary API failed for tomorrow prices: ${String(err)}. Falling back to REE...`
+      `[wattly] Primary API failed for tomorrow prices: ${String(err)}. Falling back to REE spot...`
     );
   }
 
-  try {
-    const reeData = await fetchReePrices(tomorrowMadridStr);
-    if (reeData) {
-      return { ...reeData, isForecast: false };
-    }
-  } catch (err) {
-    console.warn(`[wattly] REE fallback failed for tomorrow prices: ${String(err)}`);
-  }
-
+  // 3. Fallback: REE OMIE Spot forecast
   try {
     const spotData = await fetchReeSpotPrices(tomorrowMadridStr);
-    if (spotData) {
+    if (spotData && spotData.prices.length >= 23) {
       return spotData;
+    }
+    if (spotData && spotData.prices.length < 23) {
+      console.warn(
+        `[wattly] REE spot returned incomplete data (${spotData.prices.length} hours) for tomorrow.`
+      );
     }
   } catch (err) {
     console.warn(`[wattly] REE spot fallback failed for tomorrow prices: ${String(err)}`);

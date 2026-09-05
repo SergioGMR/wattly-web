@@ -37,9 +37,10 @@ function formatHourTick(hourStr: string, index: number): string {
   return `${String(index).padStart(2, '0')}h`;
 }
 
-function calculateYScale(prices: HourlyPrice[]) {
-  const maxPrice = Math.max(...prices.map((p) => p.price), 0);
-  const targetMax = maxPrice > 0 ? maxPrice * 1.1 : 0.1;
+export function calculateYScale(prices: HourlyPrice[], plotBottom = 200, plotHeight = 180) {
+  const rawMin = Math.min(...prices.map((p) => p.price), 0);
+  const rawMax = Math.max(...prices.map((p) => p.price), 0);
+  const targetMax = rawMax > 0 ? rawMax * 1.1 : 0.1;
 
   const roughStep = targetMax / 4;
   const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep || 0.01)));
@@ -51,9 +52,26 @@ function calculateYScale(prices: HourlyPrice[]) {
   else if (normalized <= 5) niceStep = 5 * magnitude;
   else niceStep = 10 * magnitude;
 
-  const yMax = niceStep * 4;
-  const ticks = [0, niceStep, niceStep * 2, niceStep * 3, yMax];
-  return { yMax, ticks };
+  let yMin = 0;
+  if (rawMin < 0) {
+    const numNegSteps = Math.max(1, Math.ceil(Math.abs(rawMin) / niceStep));
+    yMin = -niceStep * numNegSteps;
+  }
+
+  const numPosSteps = Math.max(1, Math.ceil(targetMax / niceStep));
+  const yMax = niceStep * numPosSteps;
+  const yRange = yMax - yMin;
+
+  const yZero = plotBottom - ((0 - yMin) / yRange) * plotHeight;
+
+  const ticks: number[] = [];
+  const totalSteps = Math.round((yMax - yMin) / niceStep);
+  for (let i = 0; i <= totalSteps; i++) {
+    const val = Math.abs(yMin + i * niceStep) < 1e-9 ? 0 : Number((yMin + i * niceStep).toFixed(6));
+    ticks.push(val);
+  }
+
+  return { yMin, yMax, yRange, yZero, ticks };
 }
 
 interface Props {
@@ -81,7 +99,7 @@ export default function PriceChart({ prices }: Props) {
   const plotHeight = 180;
   const plotBottom = plotTop + plotHeight;
 
-  const { yMax, ticks } = calculateYScale(prices);
+  const { yMin, yRange, yZero, ticks } = calculateYScale(prices, plotBottom, plotHeight);
   const slotWidth = plotWidth / prices.length;
 
   return (
@@ -95,18 +113,20 @@ export default function PriceChart({ prices }: Props) {
         >
           {/* Y-axis grid lines and tick labels */}
           {ticks.map((t) => {
-            const y = plotBottom - (t / yMax) * plotHeight;
+            const y = plotBottom - ((t - yMin) / yRange) * plotHeight;
             return (
               <g key={`y-${t}`}>
-                <line
-                  x1={plotLeft}
-                  y1={y}
-                  x2={plotLeft + plotWidth}
-                  y2={y}
-                  class="stroke-gray-200 dark:stroke-slate-800"
-                  stroke-width="1"
-                  stroke-dasharray={t === 0 ? undefined : '3 3'}
-                />
+                {t !== 0 && (
+                  <line
+                    x1={plotLeft}
+                    y1={y}
+                    x2={plotLeft + plotWidth}
+                    y2={y}
+                    class="stroke-gray-200 dark:stroke-slate-800"
+                    stroke-width="1"
+                    stroke-dasharray="3 3"
+                  />
+                )}
                 <text
                   x={plotLeft - 8}
                   y={y}
@@ -120,15 +140,27 @@ export default function PriceChart({ prices }: Props) {
             );
           })}
 
-          {/* X-axis baseline */}
+          {/* Zero baseline */}
           <line
             x1={plotLeft}
-            y1={plotBottom}
+            y1={yZero}
             x2={plotLeft + plotWidth}
-            y2={plotBottom}
+            y2={yZero}
             class="stroke-gray-300 dark:stroke-slate-700"
             stroke-width="1"
           />
+
+          {/* Bottom boundary line when zero baseline is elevated */}
+          {yZero !== plotBottom && (
+            <line
+              x1={plotLeft}
+              y1={plotBottom}
+              x2={plotLeft + plotWidth}
+              y2={plotBottom}
+              class="stroke-gray-200 dark:stroke-slate-800"
+              stroke-width="1"
+            />
+          )}
 
           {/* X-axis hour ticks */}
           {prices.map((p, i) => {
@@ -161,9 +193,12 @@ export default function PriceChart({ prices }: Props) {
             const slotX = plotLeft + i * slotWidth;
             const barWidth = Math.min(22, Math.max(6, slotWidth - 4));
             const barX = slotX + (slotWidth - barWidth) / 2;
-            const rawHeight = yMax > 0 ? (p.price / yMax) * plotHeight : 0;
-            const barHeight = Math.max(2, rawHeight);
-            const barY = plotBottom - barHeight;
+            const isNegative = p.price < 0;
+            const rawHeight = isNegative
+              ? ((0 - p.price) / yRange) * plotHeight
+              : ((p.price - 0) / yRange) * plotHeight;
+            const barHeight = Math.max(3, rawHeight);
+            const barY = isNegative ? yZero : yZero - barHeight;
             const isHovered = hoveredIndex === i;
 
             return (
@@ -210,15 +245,20 @@ export default function PriceChart({ prices }: Props) {
             (() => {
               const hovered = prices[hoveredIndex];
               const slotCenterX = plotLeft + hoveredIndex * slotWidth + slotWidth / 2;
-              const rawHeight = yMax > 0 ? (hovered.price / yMax) * plotHeight : 0;
-              const barY = plotBottom - Math.max(2, rawHeight);
+              const isNeg = hovered.price < 0;
+              const rawHeight = isNeg
+                ? ((0 - hovered.price) / yRange) * plotHeight
+                : ((hovered.price - 0) / yRange) * plotHeight;
+              const barHeight = Math.max(3, rawHeight);
+              const barY = isNeg ? yZero : yZero - barHeight;
               const tooltipWidth = 110;
               const tooltipHeight = 42;
               const tooltipX = Math.max(
                 plotLeft,
                 Math.min(plotLeft + plotWidth - tooltipWidth, slotCenterX - tooltipWidth / 2)
               );
-              const tooltipY = barY > plotTop + 50 ? barY - 48 : barY + 8;
+              const tooltipY =
+                barY > plotTop + 50 ? barY - 48 : (isNeg ? yZero + barHeight : barY) + 8;
 
               return (
                 <g pointer-events="none" class="transition-all duration-150">
